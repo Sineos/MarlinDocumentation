@@ -123,12 +123,36 @@ category:     [ tools ]
                     <tr>
                       <td align="left" valign="middle"><label for="USE_UBL">Use Bed Levelling:</label></td>
                       <td valign="middle"><input type="checkbox" name="USE_UBL" id="USE_UBL"></td>
-                      <td valign="middle">Activate UBL and level bed before printing</td>
+                      <td valign="middle">Level bed before printing. Bed levelling has to be activated.</td>
                     </tr>
                     <tr>
                       <td align="left" valign="middle"><label for="EXTRUSION_MULT">Extrusion Multiplier:</label></td>
                       <td valign="middle"><input type="number" name="EXTRUSION_MULT" id="EXTRUSION_MULT" value="1.0"></td>
                       <td valign="middle">Usually 1.0</td>
+                    </tr>
+                    <tr>
+                      <td align="left" valign="middle"><label for="DIR_PRINT">Printing Direction:</label></td>
+                      <td valign="middle"><select name="DIR_PRINT" id="DIR_PRINT">
+                        <option value="0" selected>Left to Right (0°)</option>
+                        <option value="45">45°</option>
+                        <option value="90">Front to Back (90°)</option>
+                        <option value="135">135°</option>
+                        <option value="180">Right to Left (180°)</option>
+                        <option value="225">225°</option>
+                        <option value="270">Back to Front (270°)</option>
+                        <option value="315">315°</option>
+                      </select></td>
+                      <td valign="middle">...</td>
+                    </tr>
+                    <tr>
+                      <td align="left" valign="middle"><label for="FRAME2">Print Anchor Frame: </label></td>
+                      <td valign="middle"><input type="checkbox" name="FRAME" id="FRAME"></td>
+                      <td valign="middle">...</td>
+                    </tr>
+                    <tr>
+                      <td align="left" valign="middle"><label for="SPACE_LINE2">Test Line Spacing:</label></td>
+                      <td valign="middle"><input name="SPACE_LINE" type="number" id="SPACE_LINE" value="5"></td>
+                      <td valign="middle">...</td>
                     </tr>
                   </tbody>
                 </table></td>

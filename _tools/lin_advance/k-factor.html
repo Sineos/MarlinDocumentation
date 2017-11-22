@@ -2,18 +2,20 @@
 title:        'K-Factor Calibration Pattern'
 description:  'Create Gcode to calibrate LIN_ADVANCE setting'
 category:     [ tools ]
---- 
+---
 <script type="text/javascript" src="./k-factor.js"></script>
 <div class="container" role="main">
   <div class="row">
     <div class="col-lg-12" id="k-factor">
       <h1>K-Factor Calibration Pattern</h1>
-      <p>The below Javascript will generate gcode that will support the user in calibrating the K-Factor for Marlin's Linear Advance Feature. The default values should work for a standard PLA material with a 0.4 mm nozzle. </p>
+      <p>The below Javascript will generate G-Code that will support the user in calibrating the K-Factor for Marlin's Linear Advance Feature. The default values should work for a standard PLA material with a 0.4 mm nozzle. </p>
       <h3>Notes on the settings:</h3>
       <ul>
         <li>Fast and slow speed should be significantly different or the K-Factor effect will barely be visible</li>
-        <li>Use bed levelling requires a probe</li>
-        <li>The printer's bed is assumed to be rectangular. For round beds use the diameter as approximation but  extra care should be taken that the pattern size matches the bed. The overall width (X-direction) of the print is always 100 mm. The length (Y-direction) depends on the K-Factor Settings. The sanity check will only work for rectangular beds.</li>
+        <li>Use bed leveling requires a probe</li>
+        <li>The printer's bed is assumed to be rectangular. For round beds use the diameter as approximation but  extra care should be taken that the pattern size matches the bed. </li>
+        <li>The overall width (X-direction) of the print is always 100 mm. The length (Y-direction) depends on the K-Factor Settings and Line Spacing.</li>
+        <li>Verify that the print matches your bed size before printing. Use a host software like <a href="http://www.pronterface.com/" target="new">Printrun</a> or <a href="https://www.repetier.com/" target="new">Repetier Host</a> or an on-line G-Code visualizer like <a href="http://gcode.ws/" target="new">GCODE ANALYZER</a></li>
         <li>Start and End value for the K-Factor determines the range that the test pattern will cover. For example a start value of 50 and an end value of 150 will test a range of 100.</li>
         <li>The K-Factor stepping determines how many test lines are printed for the above range. For example, a Stepping of 10 and a range of 100 results in 10 test lines. A stepping of 3 would not work in this example as 100 cannot be exactly divided by 3. The script will throw an error message if an exact division is not possible. In this case either the range or the  stepping needs to be adjusted.</li>
         <li>The proper K-Factor depends on the filament, nozzle size, nozzle geometry and printing temperature. If any of these values change, the calibration might need to be repeated.</li>
@@ -121,9 +123,9 @@ category:     [ tools ]
                       <td valign="middle">Ratio between nozzle diameter and extruded line width. Should be between 1.05 and 1.2</td>
                     </tr>
                     <tr>
-                      <td align="left" valign="middle"><label for="USE_UBL">Use Bed Levelling:</label></td>
+                      <td align="left" valign="middle"><label for="USE_UBL">Use Bed Leveling:</label></td>
                       <td valign="middle"><input type="checkbox" name="USE_UBL" id="USE_UBL"></td>
-                      <td valign="middle">Level bed before printing. Bed levelling has to be activated.</td>
+                      <td valign="middle">Level bed before printing. Bed leveling has to be activated.</td>
                     </tr>
                     <tr>
                       <td align="left" valign="middle"><label for="EXTRUSION_MULT">Extrusion Multiplier:</label></td>
@@ -142,17 +144,17 @@ category:     [ tools ]
                         <option value="270">Back to Front (270°)</option>
                         <option value="315">315°</option>
                       </select></td>
-                      <td valign="middle">...</td>
+                      <td valign="middle">Rotates the print 45° steps relative to the test lines.</td>
                     </tr>
                     <tr>
                       <td align="left" valign="middle"><label for="FRAME2">Print Anchor Frame: </label></td>
                       <td valign="middle"><input type="checkbox" name="FRAME" id="FRAME"></td>
-                      <td valign="middle">...</td>
+                      <td valign="middle">Adds a frame around the start and end points of the test lines. May improve adhesion.</td>
                     </tr>
                     <tr>
                       <td align="left" valign="middle"><label for="SPACE_LINE2">Test Line Spacing:</label></td>
                       <td valign="middle"><input name="SPACE_LINE" type="number" id="SPACE_LINE" value="5"></td>
-                      <td valign="middle">...</td>
+                      <td valign="middle">Distance between the test lines. Will impact print size.</td>
                     </tr>
                   </tbody>
                 </table></td>

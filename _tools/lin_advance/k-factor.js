@@ -17,6 +17,7 @@
  */
 function gengcode(form1) {
 
+    // get the values from the HTML form
     var FILAMENT_DIAMETER = parseFloat(document.forms['form1']['FIL_DIA'].value);
     var NOZZLE_DIAMETER = parseFloat(document.forms['form1']['NOZ_DIA'].value);
     var NOZZLE_TEMP = parseInt(document.forms['form1']['NOZZLE_TEMP'].value);
@@ -35,23 +36,23 @@ function gengcode(form1) {
     var STEP_K = parseFloat(document.forms['form1']['K_STEP'].value);
     var SELECT_DIR = document.getElementById('DIR_PRINT');
     var PRINT_DIR = SELECT_DIR.options[SELECT_DIR.selectedIndex].value;
-	var LINE_SPACING = parseFloat(document.forms['form1']['SPACE_LINE'].value);
+    var LINE_SPACING = parseFloat(document.forms['form1']['SPACE_LINE'].value);
 
-
+    //calculate some values for later use
     var RANGE_K =  END_K - START_K;
     var LINE_WIDTH = NOZZLE_DIAMETER * NOZZLE_LINE_RATIO;
-    var PRINT_SIZE = RANGE_K / STEP_K * 5 + 25;
+    var PRINT_SIZE = RANGE_K / STEP_K * LINE_SPACING + 25;
     var CENTER_X = BED_X / 2;
     var CENTER_Y = BED_Y / 2;
-    var PRIME_START_X = CENTER_X - 60;
+    var PRIME_START_X = CENTER_X - 50;
     var PRIME_START_Y = CENTER_Y - PRINT_SIZE / 2;
-    var PRIME_END_X = CENTER_X - 60;
+    var PRIME_END_X = CENTER_X - 50;
     var PRIME_END_Y = CENTER_Y + PRINT_SIZE / 2;
-    var REF1_START_X = CENTER_X - 20;
-    var REF2_START_X = CENTER_X + 20;
+    var REF1_START_X = CENTER_X - 10;
+    var REF2_START_X = CENTER_X + 30;
     var REF_START_Y = PRINT_SIZE / 2 + CENTER_Y - 20;
     var REF_END_Y = PRINT_SIZE / 2 + CENTER_Y;
-    var PAT_START_X = CENTER_X - 40;
+    var PAT_START_X = CENTER_X - 30;
     var PAT_START_Y = CENTER_Y - PRINT_SIZE / 2;
     var FRAME_START_X = CENTER_X - 40;
     var FRAME_START_Y = CENTER_Y - PRINT_SIZE / 2;
@@ -59,28 +60,31 @@ function gengcode(form1) {
     var FRAME_END_Y = CENTER_Y + PRINT_SIZE / 2;
 
     // Check if K-Factor Stepping is a multiple of the K-Factor Range
-
     if (RANGE_K % STEP_K != 0) {
       alert("Your K-Factor range cannot be cleanly divided. Check Start / End / Steps for the K-Factor");
       document.forms['form1']['textarea'].value = '';
       return;
     }
-    // Check if the Test Pattern size does not exceed the Bed Size
 
-    if (DIR_PAT === "X") {
-      if (PRINT_SIZE > BED_Y - 20) {
-        alert("Your K-Factor settings exceed your Y bed size. Check Start / End / Steps for the K-Factor");
-        document.forms['form1']['textarea'].value = '';
-        return;
-      }
-      var START_Y = (BED_Y - PRINT_SIZE) / 2;
-    } else {
-      if (PRINT_SIZE > BED_X - 20) {
-        alert("Your K-Factor settings exceed your X bed size. Check Start / End / Steps for the K-Factor");
-        document.forms['form1']['textarea'].value = '';
-        return;
-      }
-      var START_X = (BED_X - PRINT_SIZE) / 2;
+    // Check if the Test Pattern size does not exceed the Bed Size
+    if ((PRINT_DIR == 0 || PRINT_DIR == 180) && (PRINT_SIZE >  BED_Y - 20)) {
+        if (!confirm('Your K-Factor settings exceed your Y bed size. Check Start / End / Steps for the K-Factor. \n OK to continue, Cancel to return')) {
+            document.forms['form1']['textarea'].value = '';
+            return;
+        }
+    } else if ((PRINT_DIR == 90 || PRINT_DIR == 270) && (PRINT_SIZE >  BED_X - 20)) {
+        if (!confirm('Your K-Factor settings exceed your X bed size. Check Start / End / Steps for the K-Factor. \n OK to continue, Cancel to return')) {
+            document.forms['form1']['textarea'].value = '';
+            return;
+        }
+    // Approximation only
+    } else if ((PRINT_DIR == 45 || PRINT_DIR == 135 || PRINT_DIR == 235 || PRINT_DIR == 315) &&
+        (Math.sqrt(Math.pow(PRINT_SIZE,2) + Math.pow(100,2)) >  BED_X || Math.sqrt(Math.pow(PRINT_SIZE,2) + Math.pow(100,2)) >  BED_Y))
+        {
+        if (!confirm('Your K-Factor settings COULD exceed your bed size. Check Start / End / Steps for the K-Factor. \n OK to continue, Cancel to return')) {
+           document.forms['form1']['textarea'].value = '';
+           return;
+        }
     }
 
     // Convert speeds from mm/s to mm/min if needed
@@ -95,9 +99,13 @@ function gengcode(form1) {
     var EXT_PRIME = roundNumber(EXTRUSION_RATIO * EXT_MULT * (PRIME_END_Y - PRIME_START_Y), 5);
     var EXT_20 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 20, 5);
     var EXT_40 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 40, 5);
+    var EXT_FRAME1 = roundNumber(EXTRUSION_RATIO * EXT_MULT * (PRINT_SIZE - 19), 5);
+    var EXT_FRAME2 = roundNumber(EXTRUSION_RATIO * EXT_MULT * LINE_WIDTH, 5);
 
+    // Start G-code for test pattern
     document.forms['form1']['textarea'].value = '';
-    document.forms['form1']['textarea'].value = '; K-Factor Test\n' +
+    document.forms['form1']['textarea'].value = '; ### Marlin K-Factor Calibration Pattern ###\n' +
+                                                '; -------------------------------------------\n' +
                                                 ';\n' +
                                                 '; Created: ' + new Date() + '\n' +
                                                 '; Settings:\n' +
@@ -123,56 +131,111 @@ function gengcode(form1) {
                                                 'M190 S' + BED_TEMP + ' ; set and wait for bed temp\n' +
                                                 'M104 S' + NOZZLE_TEMP + ' ; set nozzle temp and continue\n';
 
+    // Use bed levelling if activated
     if (document.getElementById('USE_UBL').checked) {
       document.forms['form1']['textarea'].value += 'G29 ; execute bed automatic levelling compensation\n';
     }
 
     document.forms['form1']['textarea'].value += 'M109 S' + NOZZLE_TEMP + ' ; block waiting for nozzle temp\n' +
-                                                 'G21 ; set units to millimetres\n' +
+                                                 'G21 ; set units to millimeters\n' +
                                                  'M204 S500 ; lower acceleration to 500mm/s2 during the test\n' +
-                                                 'M83 ; use relative distances for extrusion\n' +
                                                  'G90 ; use absolute coordinates\n' +
+                                                 'M83 ; use relative distances for extrusion\n' +
                                                  ';\n' +
                                                  '; go to layer height and prime nozzle on a line to the left\n' +
                                                  ';\n' +
-                                                 'G1 X' + rotateX(PRIME_START_X, CENTER_X, PRIME_START_Y, CENTER_Y, PRINT_DIR) + ' Y' + rotateY(PRIME_START_X, CENTER_X, PRIME_START_Y, CENTER_Y, PRINT_DIR) + ' F' + SPEED_MOVE + '\n' +
+                                                 'G1 X' + roundNumber(rotateX(PRIME_START_X, CENTER_X, PRIME_START_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                     ' Y' + roundNumber(rotateY(PRIME_START_X, CENTER_X, PRIME_START_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                     ' F' + SPEED_MOVE + '\n' +
                                                  'G1 Z' + HEIGHT_LAYER + ' F' + SPEED_SLOW + '\n' +
-                                                 'G1 X' + rotateX(PRIME_END_X, CENTER_X, PRIME_END_Y, CENTER_Y, PRINT_DIR) + ' Y' + rotateY(PRIME_END_X, CENTER_X, PRIME_END_Y, CENTER_Y, PRINT_DIR) + ' E' + EXT_PRIME + ' F' + SPEED_SLOW + ' ; extrude some to start clean\n' +
-                                                 'G1 E-' + RETRACT_DIST + '\n' +
-                                                 ';\n' +
-                                                 '; start the test (all values are relative coordinates)\n' +
-                                                 ';\n';
-                                                 //'G1 X' + rotateX(PAT_START_X, CENTER_X, PRINT_DIR) + ' Y' + rotateY(PAT_START_Y, CENTER_Y, PRINT_DIR) + ' F' + SPEED_MOVE + ' ; move to pattern start\n' +
-                                                // 'G91 ; use relative coordinates\n';
-    var j = 0;
-    for (i = START_K; i <= END_K; i = i + STEP_K) {
-        document.forms['form1']['textarea'].value += 'M900 K' + i + ' ; set K-factor\n' +
-                                                     'G1 X' + rotateX(PAT_START_X, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR) + ' Y' + rotateY(PAT_START_X, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR) + ' F' + SPEED_MOVE + ' ; move to pattern start\n' +
-                                                     'G1 E' + RETRACT_DIST + '\n' +
-                                                     'G1 X' + rotateX(PAT_START_X + 20, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR) + ' Y' + rotateY(PAT_START_X + 20, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR) + ' E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
-                                                     'G1 X' + rotateX(PAT_START_X + 60, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR) + ' Y' + rotateY(PAT_START_X + 60, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR) + ' E' + EXT_40 + ' F' + SPEED_FAST + '\n' +
-                                                     'G1 X' + rotateX(PAT_START_X + 80, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR) + ' Y' + rotateY(PAT_START_X + 80, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR) + ' E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
-                                                     'G1 E-' + RETRACT_DIST + '\n';
-        j = j + 5;
+                                                 'G1 X' + roundNumber(rotateX(PRIME_END_X, CENTER_X, PRIME_END_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                     ' Y' + roundNumber(rotateY(PRIME_END_X, CENTER_X, PRIME_END_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                     ' E' + EXT_PRIME + ' F' + SPEED_SLOW + ' ; extrude some to start clean\n' +
+                                                 'G1 E-' + RETRACT_DIST + '\n';
+
+    // if selected, print an anchor frame around test line start and end points
+    if (document.getElementById('FRAME').checked) {
+      document.forms['form1']['textarea'].value += ';\n' +
+                                                   '; print anchor frame\n' +
+                                                   ';\n' +
+                                                   'G1 X' + roundNumber(rotateX(PAT_START_X - LINE_WIDTH, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' Y' + roundNumber(rotateY(PAT_START_X - LINE_WIDTH, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' F' + SPEED_MOVE + ' ; move to frame start\n' +
+                                                   'G1 E' + RETRACT_DIST + '\n' +
+                                                   'G1 X' + roundNumber(rotateX(PAT_START_X - LINE_WIDTH, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' Y' + roundNumber(rotateY(PAT_START_X - LINE_WIDTH, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' E' + EXT_FRAME1 + ' F' + SPEED_SLOW + '\n' +
+                                                   'G1 X' + roundNumber(rotateX(PAT_START_X, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' Y' + roundNumber(rotateY(PAT_START_X, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' E' + EXT_FRAME2 + ' F' + SPEED_SLOW + '\n' +
+                                                   'G1 X' + roundNumber(rotateX(PAT_START_X, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' Y' + roundNumber(rotateY(PAT_START_X, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' E' + EXT_FRAME1 + ' F' + SPEED_SLOW + '\n' +
+                                                   'G1 E-' + RETRACT_DIST + '\n' +
+                                                   'G1 X' + roundNumber(rotateX(PAT_START_X + 80, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' Y' + roundNumber(rotateY(PAT_START_X + 80, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' F' + SPEED_MOVE + ' ; move to frame start\n' +
+                                                   'G1 E' + RETRACT_DIST + '\n' +
+                                                   'G1 X' + roundNumber(rotateX(PAT_START_X + 80, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' Y' + roundNumber(rotateY(PAT_START_X + 80, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' E' + EXT_FRAME1 + ' F' + SPEED_SLOW + '\n' +
+                                                   'G1 X' + roundNumber(rotateX(PAT_START_X + 80 + LINE_WIDTH, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' Y' + roundNumber(rotateY(PAT_START_X + 80 + LINE_WIDTH, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' E' + EXT_FRAME2 + ' F' + SPEED_SLOW + '\n' +
+                                                   'G1 X' + roundNumber(rotateX(PAT_START_X  + 80 + LINE_WIDTH, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' Y' + roundNumber(rotateY(PAT_START_X  + 80 + LINE_WIDTH, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' E' + EXT_FRAME1 + ' F' + SPEED_SLOW + '\n' +
+                                                   'G1 E-' + RETRACT_DIST + '\n';
     }
 
+    // generate the k-factor test pattern
+    document.forms['form1']['textarea'].value += ';\n' +
+                                                 '; start the test pattern\n' +
+                                                 ';\n';
+    var j = 0;
+    for (i = START_K; i <= END_K; i = i + STEP_K) {
+      document.forms['form1']['textarea'].value += 'M900 K' + i + ' ; set K-factor\n' +
+                                                   'G1 X' + roundNumber(rotateX(PAT_START_X, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' Y' + roundNumber(rotateY(PAT_START_X, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' F' + SPEED_MOVE + ' ; move to pattern start\n' +
+                                                   'G1 E' + RETRACT_DIST + '\n' +
+                                                   'G1 X' + roundNumber(rotateX(PAT_START_X + 20, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' Y' + roundNumber(rotateY(PAT_START_X + 20, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
+                                                   'G1 X' + roundNumber(rotateX(PAT_START_X + 60, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' Y' + roundNumber(rotateY(PAT_START_X + 60, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' E' + EXT_40 + ' F' + SPEED_FAST + '\n' +
+                                                   'G1 X' + roundNumber(rotateX(PAT_START_X + 80, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
+                                                       ' Y' + roundNumber(rotateY(PAT_START_X + 80, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
+                                                   ' E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
+                                                   'G1 E-' + RETRACT_DIST + '\n';
+      j = j + LINE_SPACING;
+    }
+    // mark area of speed changes and close G-code
     document.forms['form1']['textarea'].value += ';\n' +
                                                  '; mark the test area for reference\n' +
                                                  ';\n' +
-                                                 'G1 X' + rotateX(REF1_START_X, CENTER_X, REF_START_Y, CENTER_Y, PRINT_DIR) + ' Y' + rotateY(REF1_START_X, CENTER_X, REF_START_Y, CENTER_Y, PRINT_DIR) + ' F' + SPEED_MOVE + '\n' +
+                                                 'G1 X' + roundNumber(rotateX(REF1_START_X, CENTER_X, REF_START_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                     ' Y' + roundNumber(rotateY(REF1_START_X, CENTER_X, REF_START_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                     ' F' + SPEED_MOVE + '\n' +
                                                  'G1 E' + RETRACT_DIST + '\n' +
-                                                 'G1 X' + rotateX(REF1_START_X, CENTER_X, REF_END_Y, CENTER_Y, PRINT_DIR) + ' Y' + rotateY(REF1_START_X, CENTER_X, REF_END_Y, CENTER_Y, PRINT_DIR) + ' E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
+                                                 'G1 X' + roundNumber(rotateX(REF1_START_X, CENTER_X, REF_END_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                     ' Y' + roundNumber(rotateY(REF1_START_X, CENTER_X, REF_END_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                     ' E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
                                                  'G1 E-' + RETRACT_DIST + '\n' +
-                                                 'G1 X' + rotateX(REF2_START_X, CENTER_X, REF_START_Y, CENTER_Y, PRINT_DIR) + ' Y' + rotateY(REF2_START_X, CENTER_X, REF_START_Y, CENTER_Y, PRINT_DIR) + ' F' + SPEED_MOVE + '\n' +
+                                                 'G1 X' + roundNumber(rotateX(REF2_START_X, CENTER_X, REF_START_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                     ' Y' + roundNumber(rotateY(REF2_START_X, CENTER_X, REF_START_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                     ' F' + SPEED_MOVE + '\n' +
                                                  'G1 E' + RETRACT_DIST + '\n' +
-                                                 'G1 X' + rotateX(REF2_START_X, CENTER_X, REF_END_Y, CENTER_Y, PRINT_DIR) + ' Y' + rotateY(REF2_START_X, CENTER_X, REF_END_Y, CENTER_Y, PRINT_DIR) + ' E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
+                                                 'G1 X' + roundNumber(rotateX(REF2_START_X, CENTER_X, REF_END_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                     ' Y' + roundNumber(rotateY(REF2_START_X, CENTER_X, REF_END_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                     ' E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
                                                  'G1 E-' + RETRACT_DIST + '\n' +
                                                  ';\n' +
                                                  '; finish\n' +
                                                  ';\n' +
                                                  'M104 S0 ; turn off hotend\n' +
                                                  'M140 S0 ; turn off bed\n' +
-                                                 'G90 ; use absolute coordinates\n' +
                                                  'G1 Z30 Y200 F' + SPEED_MOVE + ' ; move away from the print\n' +
                                                  'M84 ; disable motors\n' +
                                                  'M502 ; resets parameters from ROM (for those who do not have an EEPROM)\n' +
@@ -243,3 +306,4 @@ function rotateY(x, xm, y, ym, a) {
     var yr = (cos * (y - ym)) - (sin * (x - xm)) + ym; //CW
     return yr;
 }
+

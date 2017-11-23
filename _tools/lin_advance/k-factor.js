@@ -74,7 +74,6 @@ function gengcode(form1) {
     var FIT_WIDTH = Math.sin(ANGLE) * PRINT_SIZE + Math.cos(ANGLE) * 100;
     var FIT_HEIGHT = Math.sin(ANGLE) * 100 + Math.cos(ANGLE) * PRINT_SIZE;
     var FIT_DIAGONAL = Math.sqrt(Math.pow(PRINT_SIZE, 2) + Math.pow(100, 2));
-    alert (FIT_WIDTH + ' // ' + FIT_HEIGHT  + ' // ' + FIT_DIAGONAL);
     
     // Compare the fit rectangle with the bed size. Safety margin 5 mm
     if (FIT_WIDTH > BED_X - 5 && !document.getElementById('ROUND_BED').checked) {

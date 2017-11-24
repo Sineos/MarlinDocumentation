@@ -20,32 +20,32 @@
 function gengcode(form1) {
 
     // get the values from the HTML form
-    var FILAMENT_DIAMETER = parseFloat(document.forms['form1']['FIL_DIA'].value);
-    var NOZZLE_DIAMETER = parseFloat(document.forms['form1']['NOZ_DIA'].value);
-    var NOZZLE_TEMP = parseInt(document.forms['form1']['NOZZLE_TEMP'].value);
-    var NOZZLE_LINE_RATIO = parseFloat(document.forms['form1']['NOZ_LIN_R'].value);
-    var BED_TEMP = parseInt(document.forms['form1']['BED_TEMP'].value);
-    var SPEED_SLOW = parseInt(document.forms['form1']['SLOW_SPEED'].value);
-    var SPEED_FAST = parseInt(document.forms['form1']['FAST_SPEED'].value);
-    var SPEED_MOVE = parseInt(document.forms['form1']['MOVE_SPEED'].value);
-    var RETRACT_DIST = parseFloat(document.forms['form1']['RETRACTION'].value);
-    var BED_X = parseInt(document.forms['form1']['BEDSIZE_X'].value);
-    var BED_Y = parseInt(document.forms['form1']['BEDSIZE_Y'].value);
-    var BED_DIAMETER = parseInt(document.forms['form1']['BEDSIZE_DIAMETER'].value);
-    var HEIGHT_LAYER = parseFloat(document.forms['form1']['LAYER_HEIGHT'].value);
-    var EXT_MULT = parseFloat(document.forms['form1']['EXTRUSION_MULT'].value);
-    var START_K = parseInt(document.forms['form1']['K_START'].value);
-    var END_K = parseInt(document.forms['form1']['K_END'].value);
-    var STEP_K = parseFloat(document.forms['form1']['K_STEP'].value);
+    var FILAMENT_DIAMETER = parseFloat(document.getElementById('FIL_DIA').value);
+    var NOZZLE_DIAMETER = parseFloat(document.getElementById('NOZ_DIA').value);
+    var NOZZLE_TEMP = parseInt(document.getElementById('NOZZLE_TEMP').value);
+    var NOZZLE_LINE_RATIO = parseFloat(document.getElementById('NOZ_LIN_R').value);
+    var BED_TEMP = parseInt(document.getElementById('BED_TEMP').value);
+    var SPEED_SLOW = parseInt(document.getElementById('SLOW_SPEED').value);
+    var SPEED_FAST = parseInt(document.getElementById('FAST_SPEED').value);
+    var SPEED_MOVE = parseInt(document.getElementById('MOVE_SPEED').value);
+    var RETRACT_DIST = parseFloat(document.getElementById('RETRACTION').value);
+    var BED_X = parseInt(document.getElementById('BEDSIZE_X').value);
+    var BED_Y = parseInt(document.getElementById('BEDSIZE_Y').value);
+    var BED_DIAMETER = parseInt(document.getElementById('BEDSIZE_DIAMETER').value);
+    var HEIGHT_LAYER = parseFloat(document.getElementById('LAYER_HEIGHT').value);
+    var EXT_MULT = parseFloat(document.getElementById('EXTRUSION_MULT').value);
+    var START_K = parseInt(document.getElementById('K_START').value);
+    var END_K = parseInt(document.getElementById('K_END').value);
+    var STEP_K = parseFloat(document.getElementById('K_STEP').value);
     var SELECT_DIR = document.getElementById('DIR_PRINT');
     var PRINT_DIR = SELECT_DIR.options[SELECT_DIR.selectedIndex].value;
     var LINE_SPACING = parseFloat(document.forms['form1']['SPACE_LINE'].value);
     var ALT_PATTERN = document.getElementById("PAT_ALT").checked;
 
     //calculate some values for later use
-    var RANGE_K =  END_K - START_K;
+    var RANGE_K = END_K - START_K;
     var LINE_WIDTH = NOZZLE_DIAMETER * NOZZLE_LINE_RATIO;
-    var PRINT_SIZE = RANGE_K / STEP_K * LINE_SPACING + 25;
+    var PRINT_SIZE = (RANGE_K / STEP_K * LINE_SPACING) + 25;
     var CENTER_X = (document.getElementById('ROUND_BED').checked ? BED_DIAMETER / 2 : BED_X / 2);
     var CENTER_Y = (document.getElementById('ROUND_BED').checked ? BED_DIAMETER / 2 : BED_Y / 2);
     var PRIME_START_X = CENTER_X - 50;
@@ -68,13 +68,11 @@ function gengcode(form1) {
     }
 
     // Calculate a straight (non rotated) least fit rectangle around the entire test pattern
-    // https://stackoverflow.com/a/17453766
-    var PRINT_DIR_RAD = PRINT_DIR  * Math.PI / 180;
-    var ANGLE = ((PRINT_DIR_RAD > Math.PI * 0.5 && PRINT_DIR_RAD < Math.PI * 1) || (PRINT_DIR_RAD > Math.PI * 1.5 && PRINT_DIR_RAD < Math.PI * 2)) ? Math.PI - PRINT_DIR_RAD : PRINT_DIR_RAD; 
-    var FIT_WIDTH = Math.sin(ANGLE) * PRINT_SIZE + Math.cos(ANGLE) * 100;
-    var FIT_HEIGHT = Math.sin(ANGLE) * 100 + Math.cos(ANGLE) * PRINT_SIZE;
+    var PRINT_DIR_RAD = PRINT_DIR * Math.PI / 180;
+    var FIT_WIDTH = Math.abs(100 * Math.cos(PRINT_DIR_RAD)) + Math.abs(PRINT_SIZE * Math.sin(PRINT_DIR_RAD));
+    var FIT_HEIGHT = Math.abs(100 * Math.sin(PRINT_DIR_RAD)) + Math.abs(PRINT_SIZE * Math.cos(PRINT_DIR_RAD));
     var FIT_DIAGONAL = Math.sqrt(Math.pow(PRINT_SIZE, 2) + Math.pow(100, 2));
-    
+
     // Compare the fit rectangle with the bed size. Safety margin 5 mm
     if (FIT_WIDTH > BED_X - 5 && !document.getElementById('ROUND_BED').checked) {
         if (!confirm('Your K-Factor settings exceed your X bed size. Check Start / End / Steps for the K-Factor. \n OK to continue, Cancel to return')) {
@@ -91,7 +89,7 @@ function gengcode(form1) {
             document.forms['form1']['textarea'].value = '';
             return;
         }
-    }   
+    }
 
     // Convert speeds from mm/s to mm/min if needed
     if (document.getElementById('MM_S').checked) {
@@ -101,7 +99,7 @@ function gengcode(form1) {
     }
 
     //Set the extrusion parameters
-    var EXTRUSION_RATIO = LINE_WIDTH * HEIGHT_LAYER / (Math.pow(FILAMENT_DIAMETER / 2,2) * Math.PI);
+    var EXTRUSION_RATIO = LINE_WIDTH * HEIGHT_LAYER / (Math.pow(FILAMENT_DIAMETER / 2, 2) * Math.PI);
     var EXT_PRIME = roundNumber(EXTRUSION_RATIO * EXT_MULT * (PRIME_END_Y - PRIME_START_Y), 5);
     var EXT_20 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 20, 5);
     var EXT_40 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 40, 5);
@@ -138,9 +136,9 @@ function gengcode(form1) {
                                                 'M190 S' + BED_TEMP + ' ; set and wait for bed temp\n' +
                                                 'M104 S' + NOZZLE_TEMP + ' ; set nozzle temp and continue\n';
 
-    // Use bed levelling if activated
+    // Use bed leveling if activated
     if (document.getElementById('USE_UBL').checked) {
-        document.forms['form1']['textarea'].value += 'G29 ; execute bed automatic levelling compensation\n';
+        document.forms['form1']['textarea'].value += 'G29 ; execute bed automatic leveling compensation\n';
     }
 
     document.forms['form1']['textarea'].value += 'M109 S' + NOZZLE_TEMP + ' ; block waiting for nozzle temp\n' +
@@ -236,7 +234,7 @@ function gengcode(form1) {
                                                              ' E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
                                                          'G1 X' + roundNumber(rotateX(PAT_START_X, CENTER_X, PAT_START_Y + j + LINE_SPACING, CENTER_Y, PRINT_DIR), 4) +
                                                              ' Y' + roundNumber(rotateY(PAT_START_X, CENTER_X, PAT_START_Y + j + LINE_SPACING, CENTER_Y, PRINT_DIR), 4) +
-                                                             ' E' + EXT_SPACE + ' F' + SPEED_FAST + '\n';                                                      
+                                                             ' E' + EXT_SPACE + ' F' + SPEED_FAST + '\n';
             j = j + LINE_SPACING;
             k = k + 1;
         } else {
@@ -355,7 +353,7 @@ function rotateY(x, xm, y, ym, a) {
     return yr;
 }
 
-function check_frame(form1) {
+function check_frame(form) {
     if (document.getElementById('PAT_ALT').checked) {
         document.getElementById('FRAME').disabled = true;
         document.getElementById('FRAME').checked = false;
@@ -364,7 +362,7 @@ function check_frame(form1) {
     }
 }
 
-function check_shape(form1) {
+function check_shape(form) {
     if (document.getElementById('ROUND_BED').checked) {
         document.getElementById('BEDSIZE_X').disabled = true;
         document.getElementById('BEDSIZE_Y').disabled = true;

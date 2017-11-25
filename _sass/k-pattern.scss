@@ -1,0 +1,22 @@
+.calibpat table {
+    height: 100%;
+}
+
+.calibpat td {
+    height: 100%;
+    padding: 4px;
+	vertical-align: middle;
+}
+
+.calibpat textarea {
+    border: none;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    display: block;
+    resize: none;
+}
+
+.calibpat2 td {
+    height: 70px;
+}

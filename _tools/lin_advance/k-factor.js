@@ -17,9 +17,9 @@
  */
 "use strict";
 
-function gengcode(form1) {
+function gengcode() {
 
-    // get the values from the HTML form
+    // get the values from the HTML elements
     var FILAMENT_DIAMETER = parseFloat(document.getElementById('FIL_DIA').value);
     var NOZZLE_DIAMETER = parseFloat(document.getElementById('NOZ_DIA').value);
     var NOZZLE_TEMP = parseInt(document.getElementById('NOZZLE_TEMP').value);
@@ -39,54 +39,55 @@ function gengcode(form1) {
     var STEP_K = parseFloat(document.getElementById('K_STEP').value);
     var SELECT_DIR = document.getElementById('DIR_PRINT');
     var PRINT_DIR = SELECT_DIR.options[SELECT_DIR.selectedIndex].value;
-    var LINE_SPACING = parseFloat(document.forms['form1']['SPACE_LINE'].value);
+    var LINE_SPACING = parseFloat(document.getElementById('SPACE_LINE').value);
     var ALT_PATTERN = document.getElementById("PAT_ALT").checked;
 
     //calculate some values for later use
     var RANGE_K = END_K - START_K;
     var LINE_WIDTH = NOZZLE_DIAMETER * NOZZLE_LINE_RATIO;
-    var PRINT_SIZE = (RANGE_K / STEP_K * LINE_SPACING) + 25;
+    var PRINT_SIZE_Y = (RANGE_K / STEP_K * LINE_SPACING) + 25;
+    var PRINT_SIZE_X = 100;
     var CENTER_X = (document.getElementById('ROUND_BED').checked ? BED_DIAMETER / 2 : BED_X / 2);
     var CENTER_Y = (document.getElementById('ROUND_BED').checked ? BED_DIAMETER / 2 : BED_Y / 2);
     var PRIME_START_X = CENTER_X - 50;
-    var PRIME_START_Y = CENTER_Y - (PRINT_SIZE / 2);
+    var PRIME_START_Y = CENTER_Y - (PRINT_SIZE_Y / 2);
     var PRIME_END_X = CENTER_X - 50;
-    var PRIME_END_Y = CENTER_Y + (PRINT_SIZE / 2);
+    var PRIME_END_Y = CENTER_Y + (PRINT_SIZE_Y / 2);
     var REF1_START_X = CENTER_X - 10;
     var REF2_START_X = CENTER_X + 30;
-    var REF_START_Y = (PRINT_SIZE / 2) + CENTER_Y - 20;
-    var REF_END_Y = (PRINT_SIZE / 2) + CENTER_Y;
+    var REF_START_Y = (PRINT_SIZE_Y / 2) + CENTER_Y - 20;
+    var REF_END_Y = (PRINT_SIZE_Y / 2) + CENTER_Y;
     var PAT_START_X = CENTER_X - 30;
-    var PAT_START_Y = CENTER_Y - (PRINT_SIZE / 2);
+    var PAT_START_Y = CENTER_Y - (PRINT_SIZE_Y / 2);
 
 
     // Check if K-Factor Stepping is a multiple of the K-Factor Range
     if (RANGE_K % STEP_K != 0) {
         alert("Your K-Factor range cannot be cleanly divided. Check Start / End / Steps for the K-Factor");
-        document.forms['form1']['textarea'].value = '';
+        document.getElementById('textarea').value = '';
         return;
     }
 
     // Calculate a straight (non rotated) least fit rectangle around the entire test pattern
     var PRINT_DIR_RAD = PRINT_DIR * Math.PI / 180;
-    var FIT_WIDTH = Math.abs(100 * Math.cos(PRINT_DIR_RAD)) + Math.abs(PRINT_SIZE * Math.sin(PRINT_DIR_RAD));
-    var FIT_HEIGHT = Math.abs(100 * Math.sin(PRINT_DIR_RAD)) + Math.abs(PRINT_SIZE * Math.cos(PRINT_DIR_RAD));
-    var FIT_DIAGONAL = Math.sqrt(Math.pow(PRINT_SIZE, 2) + Math.pow(100, 2));
+    var FIT_WIDTH = Math.abs(PRINT_SIZE_X * Math.cos(PRINT_DIR_RAD)) + Math.abs(PRINT_SIZE_Y * Math.sin(PRINT_DIR_RAD));
+    var FIT_HEIGHT = Math.abs(PRINT_SIZE_X * Math.sin(PRINT_DIR_RAD)) + Math.abs(PRINT_SIZE_Y * Math.cos(PRINT_DIR_RAD));
+    var FIT_DIAGONAL = Math.sqrt(Math.pow(PRINT_SIZE_Y, 2) + Math.pow(PRINT_SIZE_X, 2));
 
     // Compare the fit rectangle with the bed size. Safety margin 5 mm
     if (FIT_WIDTH > BED_X - 5 && !document.getElementById('ROUND_BED').checked) {
         if (!confirm('Your K-Factor settings exceed your X bed size. Check Start / End / Steps for the K-Factor. \n OK to continue, Cancel to return')) {
-            document.forms['form1']['textarea'].value = '';
+            document.getElementById('textarea').value = '';
             return;
         }
     } else if (FIT_HEIGHT > BED_Y - 5 && !document.getElementById('ROUND_BED').checked) {
         if (!confirm('Your K-Factor settings exceed your Y bed size. Check Start / End / Steps for the K-Factor. \n OK to continue, Cancel to return')) {
-            document.forms['form1']['textarea'].value = '';
+            document.getElementById('textarea').value = '';
             return;
         }
     } else if (FIT_DIAGONAL > BED_DIAMETER - 5 && document.getElementById('ROUND_BED').checked) {
         if (!confirm('Your K-Factor settings exceed your bed\'s diameter. Check Start / End / Steps for the K-Factor. \n OK to continue, Cancel to return')) {
-            document.forms['form1']['textarea'].value = '';
+            document.getElementById('textarea').value = '';
             return;
         }
     }
@@ -104,33 +105,42 @@ function gengcode(form1) {
     var EXT_20 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 20, 5);
     var EXT_40 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 40, 5);
     var EXT_SPACE = roundNumber(EXTRUSION_RATIO * EXT_MULT * LINE_SPACING, 5);
-    var EXT_FRAME1 = roundNumber(EXTRUSION_RATIO * EXT_MULT * (PRINT_SIZE - 19), 5);
+    var EXT_FRAME1 = roundNumber(EXTRUSION_RATIO * EXT_MULT * (PRINT_SIZE_Y - 19), 5);
     var EXT_FRAME2 = roundNumber(EXTRUSION_RATIO * EXT_MULT * LINE_WIDTH, 5);
 
     // Start G-code for test pattern
-    document.forms['form1']['textarea'].value = '';
-    document.forms['form1']['textarea'].value = '; ### Marlin K-Factor Calibration Pattern ###\n' +
+    document.getElementById('textarea').value = '';
+    document.getElementById('textarea').value = '; ### Marlin K-Factor Calibration Pattern ###\n' +
                                                 '; -------------------------------------------\n' +
                                                 ';\n' +
                                                 '; Created: ' + new Date() + '\n' +
                                                 '; Settings:\n' +
-                                                '; Filament Diameter = ' + FILAMENT_DIAMETER + '\n' +
-                                                '; Nozzle Diameter = ' + NOZZLE_DIAMETER + '\n' +
-                                                '; Nozzle Temperature = ' + NOZZLE_TEMP + '\n' +
+                                                '; Print Size X = ' + PRINT_SIZE_X + ' mm\n' +
+                                                '; Print Size Y = ' + PRINT_SIZE_Y + ' mm\n' +
+                                                '; Print Rotation = ' + PRINT_DIR + ' degree\n' +
+                                                '; Print Pattern = ' + (ALT_PATTERN ? "Alternate" : "Standard") + '\n' +
+                                                '; Print Frame = ' + (document.getElementById('FRAME').checked ? "true" : "false") + '\n' +
+                                                '; Filament Diameter = ' + FILAMENT_DIAMETER + ' mm\n' +
+                                                '; Nozzle Diameter = ' + NOZZLE_DIAMETER + ' mm\n' +
+                                                '; Nozzle Temperature = ' + NOZZLE_TEMP + ' °C\n' +
                                                 '; Nozzle / Line Ratio = ' + NOZZLE_LINE_RATIO + '\n' +
-                                                '; Bed Temperature = ' +BED_TEMP + '\n' +
-                                                '; Slow Printing Speed = ' + SPEED_SLOW + '\n' +
-                                                '; Fast Printing Speed = ' + SPEED_FAST + '\n' +
-                                                '; Movement Speed = ' + SPEED_MOVE + '\n' +
+                                                '; Bed Temperature = ' +BED_TEMP + ' °C\n' +
+                                                '; Slow Printing Speed = ' + SPEED_SLOW + ' mm/s\n' +
+                                                '; Fast Printing Speed = ' + SPEED_FAST + ' mm/s\n' +
+                                                '; Movement Speed = ' + SPEED_MOVE + ' mm/s\n' +
                                                 '; Use UBL = ' + (document.getElementById('USE_UBL').checked ? "true" : "false") + '\n' +
-                                                '; Retraction Distance = ' + RETRACT_DIST + '\n' +
-                                                '; Bed Size X = ' + BED_X + '\n' +
-                                                '; Bed Size Y = ' + BED_Y + '\n' +
-                                                '; Layer Height = ' + HEIGHT_LAYER + '\n' +
+                                                '; Retraction Distance = ' + RETRACT_DIST + ' mm\n' +
+                                                (!document.getElementById('ROUND_BED').checked ? '; Bed Size X = ' + BED_X + ' mm\n' : '') +
+                                                (!document.getElementById('ROUND_BED').checked ? '; Bed Size Y = ' + BED_Y + ' mm\n' : '') +
+                                                (document.getElementById('ROUND_BED').checked ? '; Bed Diameter = ' + BED_DIAMETER + ' mm\n' : '') +
+                                                '; Layer Height = ' + HEIGHT_LAYER + ' mm\n' +
                                                 '; Extrusion Multiplier = ' + EXT_MULT + '\n' +
                                                 '; Starting Value K-Factor = ' + START_K + '\n' +
                                                 '; Ending value K-Factor = ' + END_K + '\n' +
                                                 '; K-Factor Stepping = ' + STEP_K + '\n' +
+                                                '; Test Line Spacing = ' + STEP_K + ' mm\n' +
+                                                ';\n' +
+                                                '; prepare printing\n' +
                                                 ';\n' +
                                                 'G28 ; home all axes\n' +
                                                 'M190 S' + BED_TEMP + ' ; set and wait for bed temp\n' +
@@ -138,12 +148,12 @@ function gengcode(form1) {
 
     // Use bed leveling if activated
     if (document.getElementById('USE_UBL').checked) {
-        document.forms['form1']['textarea'].value += 'G29 ; execute bed automatic leveling compensation\n';
+        document.getElementById('textarea').value += 'G29 ; execute bed automatic leveling compensation\n';
     }
 
-    document.forms['form1']['textarea'].value += 'M109 S' + NOZZLE_TEMP + ' ; block waiting for nozzle temp\n' +
+    document.getElementById('textarea').value += 'M109 S' + NOZZLE_TEMP + ' ; block waiting for nozzle temp\n' +
                                                  'G21 ; set units to millimeters\n' +
-                                                 'M204 S500 ; lower acceleration to 500mm/s2 during the test\n' +
+                                                 'M204 S500 ; lower acceleration to 500mm/s2\n' +
                                                  'G90 ; use absolute coordinates\n' +
                                                  'M83 ; use relative distances for extrusion\n' +
                                                  ';\n' +
@@ -160,18 +170,18 @@ function gengcode(form1) {
 
     // if selected, print an anchor frame around test line start and end points
     if (document.getElementById('FRAME').checked) {
-        document.forms['form1']['textarea'].value += ';\n' +
+        document.getElementById('textarea').value += ';\n' +
                                                      '; print anchor frame\n' +
                                                      ';\n' +
                                                      'G1 X' + roundNumber(rotateX(PAT_START_X - LINE_WIDTH, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
                                                          ' Y' + roundNumber(rotateY(PAT_START_X - LINE_WIDTH, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
                                                          ' F' + SPEED_MOVE + ' ; move to frame start\n' +
                                                      'G1 E' + RETRACT_DIST + '\n' +
-                                                     'G1 X' + roundNumber(rotateX(PAT_START_X - LINE_WIDTH, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
-                                                         ' Y' + roundNumber(rotateY(PAT_START_X - LINE_WIDTH, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                     'G1 X' + roundNumber(rotateX(PAT_START_X - LINE_WIDTH, CENTER_X, PAT_START_Y + PRINT_SIZE_Y - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                         ' Y' + roundNumber(rotateY(PAT_START_X - LINE_WIDTH, CENTER_X, PAT_START_Y + PRINT_SIZE_Y - 22, CENTER_Y, PRINT_DIR), 4) +
                                                          ' E' + EXT_FRAME1 + ' F' + SPEED_SLOW + '\n' +
-                                                     'G1 X' + roundNumber(rotateX(PAT_START_X, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
-                                                         ' Y' + roundNumber(rotateY(PAT_START_X, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                     'G1 X' + roundNumber(rotateX(PAT_START_X, CENTER_X, PAT_START_Y + PRINT_SIZE_Y - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                         ' Y' + roundNumber(rotateY(PAT_START_X, CENTER_X, PAT_START_Y + PRINT_SIZE_Y - 22, CENTER_Y, PRINT_DIR), 4) +
                                                          ' E' + EXT_FRAME2 + ' F' + SPEED_SLOW + '\n' +
                                                      'G1 X' + roundNumber(rotateX(PAT_START_X, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
                                                          ' Y' + roundNumber(rotateY(PAT_START_X, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
@@ -181,11 +191,11 @@ function gengcode(form1) {
                                                          ' Y' + roundNumber(rotateY(PAT_START_X + 80, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
                                                          ' F' + SPEED_MOVE + ' ; move to frame start\n' +
                                                      'G1 E' + RETRACT_DIST + '\n' +
-                                                     'G1 X' + roundNumber(rotateX(PAT_START_X + 80, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
-                                                         ' Y' + roundNumber(rotateY(PAT_START_X + 80, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                     'G1 X' + roundNumber(rotateX(PAT_START_X + 80, CENTER_X, PAT_START_Y + PRINT_SIZE_Y - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                         ' Y' + roundNumber(rotateY(PAT_START_X + 80, CENTER_X, PAT_START_Y + PRINT_SIZE_Y - 22, CENTER_Y, PRINT_DIR), 4) +
                                                          ' E' + EXT_FRAME1 + ' F' + SPEED_SLOW + '\n' +
-                                                     'G1 X' + roundNumber(rotateX(PAT_START_X + 80 + LINE_WIDTH, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
-                                                         ' Y' + roundNumber(rotateY(PAT_START_X + 80 + LINE_WIDTH, CENTER_X, PAT_START_Y + PRINT_SIZE - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                     'G1 X' + roundNumber(rotateX(PAT_START_X + 80 + LINE_WIDTH, CENTER_X, PAT_START_Y + PRINT_SIZE_Y - 22, CENTER_Y, PRINT_DIR), 4) +
+                                                         ' Y' + roundNumber(rotateY(PAT_START_X + 80 + LINE_WIDTH, CENTER_X, PAT_START_Y + PRINT_SIZE_Y - 22, CENTER_Y, PRINT_DIR), 4) +
                                                          ' E' + EXT_FRAME2 + ' F' + SPEED_SLOW + '\n' +
                                                      'G1 X' + roundNumber(rotateX(PAT_START_X  + 80 + LINE_WIDTH, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
                                                          ' Y' + roundNumber(rotateY(PAT_START_X  + 80 + LINE_WIDTH, CENTER_X, PAT_START_Y - 3, CENTER_Y, PRINT_DIR), 4) +
@@ -194,7 +204,7 @@ function gengcode(form1) {
     }
 
     // generate the k-factor test pattern
-    document.forms['form1']['textarea'].value += ';\n' +
+    document.getElementById('textarea').value += ';\n' +
                                                  '; start the test pattern\n' +
                                                  ';\n' +
                                                  'G1 X' + roundNumber(rotateX(PAT_START_X, CENTER_X, PAT_START_Y, CENTER_Y, PRINT_DIR), 4) +
@@ -204,7 +214,7 @@ function gengcode(form1) {
     var k = 0;
     for (var i = START_K; i <= END_K; i = i + STEP_K) {
         if (ALT_PATTERN && (k % 2 == 0)) {
-            document.forms['form1']['textarea'].value += 'M900 K' + i + ' ; set K-factor\n' +
+            document.getElementById('textarea').value += 'M900 K' + i + ' ; set K-factor\n' +
                                                          'G1 E' + RETRACT_DIST + '\n' +
                                                          'G1 X' + roundNumber(rotateX(PAT_START_X + 20, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
                                                              ' Y' + roundNumber(rotateY(PAT_START_X + 20, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
@@ -221,7 +231,7 @@ function gengcode(form1) {
             j = j + LINE_SPACING;
             k = k + 1;
         } else if (ALT_PATTERN && (k % 2 != 0)) {
-            document.forms['form1']['textarea'].value += 'M900 K' + i + ' ; set K-factor\n' +
+            document.getElementById('textarea').value += 'M900 K' + i + ' ; set K-factor\n' +
                                                          'G1 E' + RETRACT_DIST + '\n' +
                                                          'G1 X' + roundNumber(rotateX(PAT_START_X + 60, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
                                                              ' Y' + roundNumber(rotateY(PAT_START_X + 60, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
@@ -238,7 +248,7 @@ function gengcode(form1) {
             j = j + LINE_SPACING;
             k = k + 1;
         } else {
-            document.forms['form1']['textarea'].value += 'M900 K' + i + ' ; set K-factor\n' +
+            document.getElementById('textarea').value += 'M900 K' + i + ' ; set K-factor\n' +
                                                          'G1 E' + RETRACT_DIST + '\n' +
                                                          'G1 X' + roundNumber(rotateX(PAT_START_X + 20, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
                                                              ' Y' + roundNumber(rotateY(PAT_START_X + 20, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), 4) +
@@ -257,7 +267,7 @@ function gengcode(form1) {
         }
     }
     // mark area of speed changes and close G-code
-    document.forms['form1']['textarea'].value += ';\n' +
+    document.getElementById('textarea').value += ';\n' +
                                                  '; mark the test area for reference\n' +
                                                  ';\n' +
                                                  (ALT_PATTERN ? 'G1 E-' + RETRACT_DIST + '\n' : '') +
@@ -290,7 +300,7 @@ function gengcode(form1) {
 }
 
 // https://stackoverflow.com/questions/21479107/saving-html5-textarea-contents-to-file
-function saveTextAsFile(form) {
+function saveTextAsFile() {
     var textToWrite = document.getElementById('textarea').value;
     var textFileAsBlob = new Blob([ textToWrite ], { type: 'text/plain' });
     var fileNameToSaveAs = "kfactor.gcode";
@@ -353,7 +363,7 @@ function rotateY(x, xm, y, ym, a) {
     return yr;
 }
 
-function check_frame(form) {
+function check_frame() {
     if (document.getElementById('PAT_ALT').checked) {
         document.getElementById('FRAME').disabled = true;
         document.getElementById('FRAME').checked = false;
@@ -362,7 +372,7 @@ function check_frame(form) {
     }
 }
 
-function check_shape(form) {
+function check_shape() {
     if (document.getElementById('ROUND_BED').checked) {
         document.getElementById('BEDSIZE_X').disabled = true;
         document.getElementById('BEDSIZE_Y').disabled = true;

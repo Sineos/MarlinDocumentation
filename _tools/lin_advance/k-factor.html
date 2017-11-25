@@ -6,216 +6,199 @@ category:     [ tools ]
 <script type="text/javascript" src="./k-factor.js"></script>
 <div class="container" role="main">
   <div class="row">
-    <div class="col-lg-12" id="k-factor">
+    <div class="calibpat" id="calibpat">
       <h1>K-Factor Calibration Pattern</h1>
       <p>The below Javascript will generate G-Code that will support the user in calibrating the K-Factor for Marlin's Linear Advance Feature. The default values should work for a standard PLA material with a 0.4 mm nozzle. </p>
       <h3>Notes on the settings:</h3>
       <ul>
-        <li>Fast and slow speed should be significantly different or the K-Factor effect will barely be visible</li>
-        <li>Use bed leveling requires a probe</li>
+        <li>Fast and slow speed should be significantly different or the K-Factor effect will barely be visible.</li>
+        <li>Use bed leveling requires a probe.</li>
         <li>The overall width (X-direction) of the print is always 100 mm. The length (Y-direction) depends on the K-Factor Settings and Line Spacing.</li>
-        <li>The script performs sanity checks if the print fits on the bed. Verify it using a host software like <a href="http://www.pronterface.com/" target="new">Printrun</a> or <a href="https://www.repetier.com/" target="new">Repetier Host</a></li>
+        <li>The script performs sanity checks if the print fits on the bed. Verify it using a host software like <a href="http://www.pronterface.com/" target="new">Printrun</a> or <a href="https://www.repetier.com/" target="new">Repetier Host</a>.</li>
         <li>Start and End value for the K-Factor determines the range that the test pattern will cover. For example a start value of 50 and an end value of 150 will test a range of 100.</li>
         <li>The K-Factor stepping determines how many test lines are printed for the above range. For example, a Stepping of 10 and a range of 100 results in 10 test lines. A stepping of 3 would not work in this example as 100 cannot be exactly divided by 3. The script will throw an error message if an exact division is not possible. In this case either the range or the  stepping needs to be adjusted.</li>
         <li>The Alternate Pattern has a second line of fast printing speed to verify 0 to Fast Printing Speed and back to 0 conditions. Best used with an increased Test Line Spacing.</li>
         <li>The proper K-Factor depends on the filament, nozzle size, nozzle geometry and printing temperature. If any of these values change, the calibration might need to be repeated.</li>
       </ul>
-      <form id="form1" name="form1" method="get">
-        <table width="100%" border="0" cellpadding="2" cellspacing="2">
-          <tbody>
-            <tr>
-              <td width="82%"><h3>Settings</h3></td>
-              <td width="18%"><h3>GCode:</h3></td>
-            </tr>
-            <tr>
-              <td valign="top"><table width="100%" border="1" cellpadding="5" cellspacing="2">
-                  <tbody>
-                    <tr>
-                      <td colspan="3" align="left" valign="middle"><h4>Printer Settings:</h4></td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="FIL_DIA">Filament Diameter:</label></td>
-                      <td valign="middle"><input type="number" name="FIL_DIA" id="FIL_DIA" value="1.75"></td>
-                      <td valign="middle">Diameter of the used filament in mm</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="NOZ_DIA">Nozzle Diameter:</label></td>
-                      <td valign="middle"><input type="number" name="NOZ_DIA" id="NOZ_DIA" value="0.4"></td>
-                      <td valign="middle">Diameter of the nozzle in mm</td>
-                    </tr>
-                    <tr>
-                      <td width="28%" align="left" valign="middle"><label for="NOZZLE_TEMP">Nozzle Temperature:</label></td>
-                      <td width="10%" valign="middle"><input type="number" name="NOZZLE_TEMP" id="NOZZLE_TEMP" value="205"></td>
-                      <td width="62%" valign="middle">Nozzle Temperature in °C</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="BED_TEMP">Bed Temperature:</label></td>
-                      <td valign="middle"><input type="number" name="BED_TEMP" id="BED_TEMP" value="60"></td>
-                      <td valign="middle">Bed Temperature in °C</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="RETRACTION">Retraction Distance:</label></td>
-                      <td valign="middle"><input type="number" name="RETRACTION" id="RETRACTION" value="1.000"></td>
-                      <td valign="middle">Retraction distance in mm</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="LAYER_HEIGHT">Layer Height:</label></td>
-                      <td valign="middle"><input type="number" name="LAYER_HEIGHT" id="LAYER_HEIGHT" value="0.200"></td>
-                      <td valign="middle">Layer Height in mm</td>
-                    </tr>
-                    <tr>
-                      <td colspan="3" align="left" valign="middle"><h4>Print Bed Settings:</h4></td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="ROUND_BED">Use round bed:</label></td>
-                      <td valign="middle"><input type="checkbox" onclick='return check_shape(form1);' name="ROUND_BED" id="ROUND_BED"></td>
-                      <td valign="middle">Use a round bed instead a rectangular one.</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="BEDSIZE_X">Bed size X:</label></td>
-                      <td valign="middle"><input type="number" name="BEDSIZE_X" id="BEDSIZE_X" value="200"></td>
-                      <td valign="middle">Size in mm of the bed in X</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="BEDSIZE_Y">Bed Size Y:</label></td>
-                      <td valign="middle"><input type="number" name="BEDSIZE_Y" id="BEDSIZE_Y" value="200"></td>
-                      <td valign="middle">Size in mm of the bed in Y</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="BEDSIZE_DIAMETER">Bed Diameter:</label></td>
-                      <td valign="middle"><input name="BEDSIZE_DIAMETER" type="number" disabled id="BEDSIZE_DIAMETER" value="200"></td>
-                      <td valign="middle">Diameter of the print bed.</td>
-                    </tr>
-                    <tr>
-                      <td colspan="3" align="left" valign="middle"><h4>Speed Settings:</h4></td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="MM_S">Use mm/s for speeds: </label></td>
-                      <td valign="middle"><input type="checkbox" name="MM_S" id="MM_S" checked></td>
-                      <td valign="middle">Use mm/s instead of mm/min</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="SLOW_SPEED">Slow Printing Speed:</label></td>
-                      <td valign="middle"><input type="number" name="SLOW_SPEED" id="SLOW_SPEED" value="20"></td>
-                      <td valign="middle">Slow printing speed</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="FAST_SPEED">Fast Printing Speed:</label></td>
-                      <td valign="middle"><input type="number" name="FAST_SPEED" id="FAST_SPEED" value="70"></td>
-                      <td valign="middle">Fast printing speed. </td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="MOVE_SPEED">Movement Speed:</label></td>
-                      <td valign="middle"><input type="number" name="MOVE_SPEED" id="MOVE_SPEED" value="120"></td>
-                      <td valign="middle">Movement speed</td>
-                    </tr>
-                    <tr>
-                      <td colspan="3" align="left" valign="middle"><h4>K-Factor Settings:</h4></td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="K_START">Start value for K:</label></td>
-                      <td valign="middle"><input type="number" name="K_START" id="K_START" value="0"></td>
-                      <td valign="middle">Start value for the K-Factor. Usually 0 but for bowden setups you might want to start higher, e.g. 30</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="K_END">End value for K:</label></td>
-                      <td valign="middle"><input type="number" name="K_END" id="K_END" value="100"></td>
-                      <td valign="middle">End value of the K-Factor. Bowden setups may be higher than 100</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="K_STEP">K-Factor Stepping:</label></td>
-                      <td valign="middle"><input type="number" name="K_STEP" id="K_STEP" value="5"></td>
-                      <td valign="middle">Stepping of the K-Factor in the test pattern. Needs to be an exact divisor of the K-Factor Range (End - Start)</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="PAT_ALT">Alternate Pattern:</label></td>
-                      <td valign="middle"><input type="checkbox" onclick='return check_frame(form1);' name="PAT_ALT" id="PAT_ALT"></td>
-                      <td valign="middle">Switches to an alternate calibration pattern. Anchor frame is not compatible with this type.</td>
-                    </tr>
-                    <tr>
-                      <td colspan="3" align="left" valign="middle"><h4>Advanced Settings:</h4></td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="NOZ_LIN_R">Nozze Line Ratio:</label></td>
-                      <td valign="middle"><input name="NOZ_LIN_R" type="number" id="NOZ_LIN_R" value="1.2"></td>
-                      <td valign="middle">Ratio between nozzle diameter and extruded line width. Should be between 1.05 and 1.2</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="USE_UBL">Use Bed Leveling:</label></td>
-                      <td valign="middle"><input type="checkbox" name="USE_UBL" id="USE_UBL"></td>
-                      <td valign="middle">Level bed before printing. Bed leveling has to be activated.</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="EXTRUSION_MULT">Extrusion Multiplier:</label></td>
-                      <td valign="middle"><input type="number" name="EXTRUSION_MULT" id="EXTRUSION_MULT" value="1.0"></td>
-                      <td valign="middle">Usually 1.0</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="DIR_PRINT">Printing Direction:</label></td>
-                      <td valign="middle"><select name="DIR_PRINT" id="DIR_PRINT">
-                        <option value="0" selected>Left to Right (0°)</option>
-                        <option value="45">45°</option>
-                        <option value="90">Front to Back (90°)</option>
-                        <option value="135">135°</option>
-                        <option value="180">Right to Left (180°)</option>
-                        <option value="225">225°</option>
-                        <option value="270">Back to Front (270°)</option>
-                        <option value="315">315°</option>
-                      </select></td>
-                      <td valign="middle">Rotates the print 45° steps relative to the test lines.</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="FRAME">Print Anchor Frame:</label></td>
-                      <td valign="middle"><input type="checkbox" name="FRAME" id="FRAME"></td>
-                      <td valign="middle">Adds a frame around the start and end points of the test lines. May improve adhesion.</td>
-                    </tr>
-                    <tr>
-                      <td align="left" valign="middle"><label for="SPACE_LINE2">Test Line Spacing:</label></td>
-                      <td valign="middle"><input name="SPACE_LINE" type="number" id="SPACE_LINE" value="5"></td>
-                      <td valign="middle">Distance between the test lines. This will impact print size.</td>
-                    </tr>
-                  </tbody>
-                </table></td>
-              <td valign="top"><p>
-                  <textarea name="textarea" cols="60" rows="51" id="textarea"></textarea>
-                </p></td>
-            </tr>
-            <tr>
-              <td valign="top"><p>&nbsp;
-                </p>
-                <p>
-                  <input name="button" type="button" id="button" form="form1" value="Generate GCode" onClick="gengcode(this.form)">
+      <table width="100%" border="1">
+        <tbody>
+          <tr>
+            <td colspan="3" bgcolor="#EDEDED"><h3>Settings:</h3></td>
+            <td bgcolor="#EDEDED"><h3>G-code:</h3></td>
+          </tr>
+          <tr>
+            <td colspan="3" bgcolor="#F5F5F5"><h4>Printer Settings:</h4></td>
+            <td width="38%" rowspan="29"><textarea name="textarea" id="textarea"></textarea></td>
+          </tr>
+          <tr>
+            <td width="14%"><label for="FIL_DIA">Filament Diameter:</label></td>
+            <td><input type="number" name="FIL_DIA" id="FIL_DIA" value="1.75"></td>
+            <td width="41%">Diameter of the used filament in mm</td>
+          </tr>
+          <tr>
+            <td><label for="NOZ_DIA">Nozzle Diameter:</label></td>
+            <td><input type="number" name="NOZ_DIA" id="NOZ_DIA" value="0.4"></td>
+            <td>Diameter of the nozzle in mm</td>
+          </tr>
+          <tr>
+            <td><label for="NOZZLE_TEMP">Nozzle Temperature:</label></td>
+            <td width="7%"><input type="number" name="NOZZLE_TEMP" id="NOZZLE_TEMP" value="205"></td>
+            <td>Nozzle Temperature in °C</td>
+          </tr>
+          <tr>
+            <td><label for="BED_TEMP">Bed Temperature:</label></td>
+            <td><input type="number" name="BED_TEMP" id="BED_TEMP" value="60"></td>
+            <td>Bed Temperature in °C</td>
+          </tr>
+          <tr>
+            <td><label for="RETRACTION">Retraction Distance:</label></td>
+            <td><input type="number" name="RETRACTION" id="RETRACTION" value="1.000"></td>
+            <td>Retraction distance in mm</td>
+          </tr>
+          <tr>
+            <td><label for="LAYER_HEIGHT">Layer Height:</label></td>
+            <td><input type="number" name="LAYER_HEIGHT" id="LAYER_HEIGHT" value="0.200"></td>
+            <td>Layer Height in mm</td>
+          </tr>
+          <tr>
+            <td colspan="3" bgcolor="#F5F5F5"><h4>Print Bed Settings:</h4></td>
+          </tr>
+          <tr>
+            <td><label for="ROUND_BED">Use round bed:</label></td>
+            <td><input type="checkbox" onclick='return check_shape();' name="ROUND_BED" id="ROUND_BED"></td>
+            <td>Use a round bed instead of a rectangular one</td>
+          </tr>
+          <tr>
+            <td><label for="BEDSIZE_X">Bed size X:</label></td>
+            <td><input type="number" name="BEDSIZE_X" id="BEDSIZE_X" value="200"></td>
+            <td>Size in mm of the bed in X</td>
+          </tr>
+          <tr>
+            <td><label for="BEDSIZE_Y">Bed Size Y:</label></td>
+            <td><input type="number" name="BEDSIZE_Y" id="BEDSIZE_Y" value="200"></td>
+            <td>Size in mm of the bed in Y</td>
+          </tr>
+          <tr>
+            <td><label for="BEDSIZE_DIAMETER">Bed Diameter:</label></td>
+            <td><input name="BEDSIZE_DIAMETER" type="number" disabled id="BEDSIZE_DIAMETER" value="200"></td>
+            <td>Diameter of the print bed in mm</td>
+          </tr>
+          <tr>
+            <td colspan="3" bgcolor="#F5F5F5"><h4>Speed Settings:</h4></td>
+          </tr>
+          <tr>
+            <td><label for="MM_S">Use mm/s: </label></td>
+            <td><input type="checkbox" name="MM_S" id="MM_S" checked></td>
+            <td>Use mm/s instead of mm/min</td>
+          </tr>
+          <tr>
+            <td><label for="SLOW_SPEED">Slow Printing Speed:</label></td>
+            <td><input type="number" name="SLOW_SPEED" id="SLOW_SPEED" value="20"></td>
+            <td>Slow printing speed</td>
+          </tr>
+          <tr>
+            <td><label for="FAST_SPEED">Fast Printing Speed:</label></td>
+            <td><input type="number" name="FAST_SPEED" id="FAST_SPEED" value="70"></td>
+            <td>Fast printing speed. </td>
+          </tr>
+          <tr>
+            <td><label for="MOVE_SPEED">Movement Speed:</label></td>
+            <td><input type="number" name="MOVE_SPEED" id="MOVE_SPEED" value="120"></td>
+            <td>Movement speed</td>
+          </tr>
+          <tr>
+            <td colspan="3" bgcolor="#F5F5F5"><h4>K-Factor Settings:</h4></td>
+          </tr>
+          <tr>
+            <td><label for="K_START">Start value for K:</label></td>
+            <td><input type="number" name="K_START" id="K_START" value="0"></td>
+            <td>Start value for the K-Factor. Usually 0 but for bowden setups you might want to start higher, e.g. 30</td>
+          </tr>
+          <tr>
+            <td><label for="K_END">End value for K:</label></td>
+            <td><input type="number" name="K_END" id="K_END" value="100"></td>
+            <td>End value of the K-Factor. Bowden setups may be higher than 100</td>
+          </tr>
+          <tr>
+            <td><label for="K_STEP">K-Factor Stepping:</label></td>
+            <td><input type="number" name="K_STEP" id="K_STEP" value="5"></td>
+            <td>Stepping of the K-Factor in the test pattern. Needs to be an exact divisor of the K-Factor Range (End - Start)</td>
+          </tr>
+          <tr>
+            <td><label for="PAT_ALT">Alternate Pattern:</label></td>
+            <td><input type="checkbox" onclick='return check_frame();' name="PAT_ALT" id="PAT_ALT"></td>
+            <td>Switches to an alternate calibration pattern. Anchor frame is not compatible with this type</td>
+          </tr>
+          <tr>
+            <td colspan="3" bgcolor="#F5F5F5"><h4>Advanced Settings:</h4></td>
+          </tr>
+          <tr>
+            <td><label for="NOZ_LIN_R">Nozze Line Ratio:</label></td>
+            <td><input name="NOZ_LIN_R" type="number" id="NOZ_LIN_R" value="1.2"></td>
+            <td>Ratio between nozzle diameter and extruded line width. Should be between 1.05 and 1.2</td>
+          </tr>
+          <tr>
+            <td><label for="USE_UBL">Use Bed Leveling:</label></td>
+            <td><input type="checkbox" name="USE_UBL" id="USE_UBL"></td>
+            <td>Level bed before printing. Bed leveling has to be activated</td>
+          </tr>
+          <tr>
+            <td><label for="EXTRUSION_MULT">Extrusion Multiplier:</label></td>
+            <td><input type="number" name="EXTRUSION_MULT" id="EXTRUSION_MULT" value="1.0"></td>
+            <td>Usually 1.0</td>
+          </tr>
+          <tr>
+            <td><label for="DIR_PRINT">Printing Direction:</label></td>
+            <td><select name="DIR_PRINT" id="DIR_PRINT">
+                <option value="0" selected>Left to Right (0°)</option>
+                <option value="45">45°</option>
+                <option value="90">Front to Back (90°)</option>
+                <option value="135">135°</option>
+                <option value="180">Right to Left (180°)</option>
+                <option value="225">225°</option>
+                <option value="270">Back to Front (270°)</option>
+                <option value="315">315°</option>
+              </select></td>
+            <td>Rotates the print 45° steps relative to the test lines</td>
+          </tr>
+          <tr>
+            <td><label for="FRAME">Print Anchor Frame:</label></td>
+            <td><input type="checkbox" name="FRAME" id="FRAME"></td>
+            <td>Adds a frame around the start and end points of the test lines. May improve adhesion</td>
+          </tr>
+          <tr>
+            <td><label for="SPACE_LINE2">Test Line Spacing:</label></td>
+            <td><input name="SPACE_LINE" type="number" id="SPACE_LINE" value="5"></td>
+            <td>Distance between the test lines. This will impact print size</td>
+          </tr>
+          <tr class="calibpat2">
+            <td colspan="3"><p>
+                <input name="button" type="button" id="button" value="Generate G-code" onClick="gengcode()">
               </p></td>
-              <td valign="top"><p>&nbsp;
-                </p>
-                <p>
-                  <input type="button" name="button2" id="button2" value="Download as file" onClick="saveTextAsFile(this.form)">
+            <td><p>
+                <input type="button" name="button2" id="button2" value="Download as file" onClick="saveTextAsFile()">
               </p></td>
-            </tr>
-            <tr>
-              <td colspan="2" valign="top"><p>&nbsp;</p>
-                <h2>Screen-shots</h2>
-                <p>The following screen-shots show some examples of the test patterns</p>
-                <ul>
-                  <li>Blue Lines are Slow Printing Speeds</li>
-                  <li>Red Lines are Fast Printing Speed</li>
-                  <li>Light blue lines are movements</li>
-                </ul>
-                <h3>Standard Pattern</h3>
-                <p><img src="/assets/images/features/lin_advance/std_pattern.png" alt="StandardPattern"></p>
-                <p>&nbsp;</p>
-                <h3>Alternate Pattern with increased Test Line Spacing</h3>
-              <p><img src="/assets/images/features/lin_advance/alt_pattern.png" alt="AlternatePattern"></p>
-              <p>&nbsp;</p>
-              <h3>Standard Pattern with Frame</h3>
-              <p><img src="/assets/images/features/lin_advance/frame_pattern.png" alt="FramePattern"></p>
-              <p>&nbsp;</p>
-              <h3>45° rotated Alternate Pattern</h3>
-              <p><img src="/assets/images/features/lin_advance/rot_pattern.png" alt="RotatedPattern"></p></td>
-            </tr>
-          </tbody>
-        </table>
-      </form>
+          </tr>
+        </tbody>
+      </table>
+      <h2>Screen-shots</h2>
+      <p>The following screen-shots show some examples of the test patterns</p>
+      <ul>
+        <li>Blue Lines are Slow Printing Speeds</li>
+        <li>Red Lines are Fast Printing Speed</li>
+        <li>Light blue lines are movements</li>
+      </ul>
+      <h3>Standard Pattern</h3>
+      <p><img src="/assets/images/features/lin_advance/std_pattern.png" alt="StandardPattern"></p>
+      <br>
+      <h3>Alternate Pattern with increased Test Line Spacing</h3>
+      <p><img src="/assets/images/features/lin_advance/alt_pattern.png" alt="AlternatePattern"></p>
+      <br>
+      <h3>Standard Pattern with Frame</h3>
+      <p><img src="/assets/images/features/lin_advance/frame_pattern.png" alt="FramePattern"></p>
+      <br>
+      <h3>45° rotated Alternate Pattern</h3>
+      <p><img src="/assets/images/features/lin_advance/rot_pattern.png" alt="RotatedPattern"></p>
     </div>
   </div>
 </div>

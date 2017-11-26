@@ -65,7 +65,7 @@ category:     [ tools ]
           </tr>
           <tr>
             <td><label for="ROUND_BED">Use round bed:</label></td>
-            <td><input type="checkbox" onclick='return check_shape();' name="ROUND_BED" id="ROUND_BED"></td>
+            <td align="center"><input type="checkbox" onclick='return check_shape();' name="ROUND_BED" id="ROUND_BED"></td>
             <td>Use a round bed instead of a rectangular one</td>
           </tr>
           <tr>
@@ -79,7 +79,7 @@ category:     [ tools ]
             <td>Size in mm of the bed in Y</td>
           </tr>
           <tr>
-            <td><label for="BEDSIZE_DIAMETER">Bed Diameter:</label></td>
+            <td><label for="BEDSIZE_DIAMETER" class="calibpat_disabled">Bed Diameter:</label></td>
             <td><input name="BEDSIZE_DIAMETER" type="number" disabled id="BEDSIZE_DIAMETER" value="200"></td>
             <td>Diameter of the print bed in mm</td>
           </tr>
@@ -88,7 +88,7 @@ category:     [ tools ]
           </tr>
           <tr>
             <td><label for="MM_S">Use mm/s: </label></td>
-            <td><input type="checkbox" name="MM_S" id="MM_S" checked></td>
+            <td align="center"><input type="checkbox" name="MM_S" id="MM_S" checked></td>
             <td>Use mm/s instead of mm/min</td>
           </tr>
           <tr>
@@ -126,7 +126,7 @@ category:     [ tools ]
           </tr>
           <tr>
             <td><label for="PAT_ALT">Alternate Pattern:</label></td>
-            <td><input type="checkbox" onclick='return check_frame();' name="PAT_ALT" id="PAT_ALT"></td>
+            <td align="center"><input type="checkbox" onclick='return check_frame();' name="PAT_ALT" id="PAT_ALT"></td>
             <td>Switches to an alternate calibration pattern. Anchor frame is not compatible with this type</td>
           </tr>
           <tr>
@@ -139,7 +139,7 @@ category:     [ tools ]
           </tr>
           <tr>
             <td><label for="USE_UBL">Use Bed Leveling:</label></td>
-            <td><input type="checkbox" name="USE_UBL" id="USE_UBL"></td>
+            <td align="center"><input type="checkbox" name="USE_UBL" id="USE_UBL"></td>
             <td>Level bed before printing. Bed leveling has to be activated</td>
           </tr>
           <tr>
@@ -163,7 +163,7 @@ category:     [ tools ]
           </tr>
           <tr>
             <td><label for="FRAME">Print Anchor Frame:</label></td>
-            <td><input type="checkbox" name="FRAME" id="FRAME"></td>
+            <td align="center"><input type="checkbox" name="FRAME" id="FRAME"></td>
             <td>Adds a frame around the start and end points of the test lines. May improve adhesion</td>
           </tr>
           <tr>

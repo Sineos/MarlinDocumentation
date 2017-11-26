@@ -365,21 +365,29 @@ function rotateY(x, xm, y, ym, a) {
 
 function check_frame() {
     if (document.getElementById('PAT_ALT').checked) {
-        document.getElementById('FRAME').disabled = true;
-        document.getElementById('FRAME').checked = false;
+        $("#FRAME").prop('checked', false);
+        $("#FRAME").prop('disabled', true);
+        $('label[for=FRAME]').css({opacity: 0.5});
     } else {
-        document.getElementById('FRAME').disabled = false;
+        $("#FRAME").prop('disabled', false);
+        $('label[for=FRAME]').css({opacity: 1});
     }
 }
 
 function check_shape() {
     if (document.getElementById('ROUND_BED').checked) {
-        document.getElementById('BEDSIZE_X').disabled = true;
-        document.getElementById('BEDSIZE_Y').disabled = true;
-        document.getElementById('BEDSIZE_DIAMETER').disabled = false;
+        $("#BEDSIZE_X").prop('disabled', true);
+        $('label[for=BEDSIZE_X]').css({opacity: 0.5});
+        $("#BEDSIZE_Y").prop('disabled', true);
+        $('label[for=BEDSIZE_Y]').css({opacity: 0.5});
+        $("#BEDSIZE_DIAMETER").prop('disabled', false);
+        $('label[for=BEDSIZE_DIAMETER]').css({opacity: 1});
     } else {
-        document.getElementById('BEDSIZE_X').disabled = false;
-        document.getElementById('BEDSIZE_Y').disabled = false;
-        document.getElementById('BEDSIZE_DIAMETER').disabled = true;
+        $("#BEDSIZE_X").prop('disabled', false);
+        $('label[for=BEDSIZE_X]').css({opacity: 1});
+        $("#BEDSIZE_Y").prop('disabled', false);
+        $('label[for=BEDSIZE_Y]').css({opacity: 1});
+        $("#BEDSIZE_DIAMETER").prop('disabled', true);
+        $('label[for=BEDSIZE_DIAMETER]').css({opacity: 0.5});
     }
 }

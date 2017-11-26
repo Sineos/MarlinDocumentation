@@ -1,18 +1,18 @@
-# Needs height 100% as parent otherwise
-# textarea will not scale to cell size
+/* Needs height 100% as parent otherwise */
+/* textarea will not scale to cell size */
 .calibpat table {
     height: 100%;
 }
 
-# Needs height 100% as parent otherwise
-# textarea will not scale to cell size
+/* Needs height 100% as parent otherwise */
+/* textarea will not scale to cell size */
 .calibpat td {
     height: 100%;
     padding: 4px;
     vertical-align: middle;
 }
 
-# Scale textarea to cell size
+/* Scale textarea to cell size */
 .calibpat textarea {
     border: none;
     width: 100%;
@@ -22,7 +22,7 @@
     resize: none;
 }
 
-# Input and label styles
+/* Input and label styles */
 .calibpat input[type=number]{
     width: 140px;
 }

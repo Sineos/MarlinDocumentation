@@ -101,12 +101,19 @@ function gengcode() {
 
     //Set the extrusion parameters
     var EXTRUSION_RATIO = LINE_WIDTH * HEIGHT_LAYER / (Math.pow(FILAMENT_DIAMETER / 2, 2) * Math.PI);
-    var EXT_PRIME = roundNumber(EXTRUSION_RATIO * EXT_MULT * (PRIME_END_Y - PRIME_START_Y), 5);
-    var EXT_20 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 20, 5);
-    var EXT_40 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 40, 5);
-    var EXT_SPACE = roundNumber(EXTRUSION_RATIO * EXT_MULT * LINE_SPACING, 5);
+//    var EXT_PRIME = roundNumber(EXTRUSION_RATIO * EXT_MULT * (PRIME_END_Y - PRIME_START_Y), 5);
+//    var EXT_20 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 20, 5);
+//    var EXT_40 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 40, 5);
+//    var EXT_SPACE = roundNumber(EXTRUSION_RATIO * EXT_MULT * LINE_SPACING, 5);
+	
+    var EXT_PRIME = roundNumber(EXTRUSION_RATIO * (PRIME_END_Y - PRIME_START_Y), 5);
+    var EXT_20 = roundNumber(EXTRUSION_RATIO * 20, 5);
+    var EXT_40 = roundNumber(EXTRUSION_RATIO * 40, 5);
+    var EXT_SPACE = roundNumber(EXTRUSION_RATIO * LINE_SPACING, 5);
+	
     var EXT_FRAME1 = roundNumber(EXTRUSION_RATIO * EXT_MULT * (PRINT_SIZE_Y - 19), 5);
     var EXT_FRAME2 = roundNumber(EXTRUSION_RATIO * EXT_MULT * LINE_WIDTH, 5);
+
 
     // Start G-code for test pattern
     document.getElementById('textarea').value = '';

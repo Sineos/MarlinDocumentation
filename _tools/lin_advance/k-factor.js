@@ -106,7 +106,7 @@ function gengcode() {
 //    var EXT_40 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 40, 5);
 //    var EXT_SPACE = roundNumber(EXTRUSION_RATIO * EXT_MULT * LINE_SPACING, 5);
 	
-    var EXT_PRIME = roundNumber(EXTRUSION_RATIO * (PRIME_END_Y - PRIME_START_Y) * 2, 5);
+    var EXT_PRIME = roundNumber(EXTRUSION_RATIO * (PRIME_END_Y - PRIME_START_Y) * 2.5, 5);
     var EXT_20 = roundNumber(EXTRUSION_RATIO * 20, 5);
     var EXT_40 = roundNumber(EXTRUSION_RATIO * 40, 5);
     var EXT_SPACE = roundNumber(EXTRUSION_RATIO * LINE_SPACING, 5);

@@ -106,7 +106,7 @@ function gengcode() {
 //    var EXT_40 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 40, 5);
 //    var EXT_SPACE = roundNumber(EXTRUSION_RATIO * EXT_MULT * LINE_SPACING, 5);
 	
-    var EXT_PRIME = roundNumber(EXTRUSION_RATIO * (PRIME_END_Y - PRIME_START_Y), 5);
+    var EXT_PRIME = roundNumber(EXTRUSION_RATIO * (PRIME_END_Y - PRIME_START_Y) * 2, 5);
     var EXT_20 = roundNumber(EXTRUSION_RATIO * 20, 5);
     var EXT_40 = roundNumber(EXTRUSION_RATIO * 40, 5);
     var EXT_SPACE = roundNumber(EXTRUSION_RATIO * LINE_SPACING, 5);
@@ -166,6 +166,7 @@ function gengcode() {
                                                  ';\n' +
                                                  '; go to layer height and prime nozzle on a line to the left\n' +
                                                  ';\n' +
+												 'G92 E0 ; reset extruder distance\n' +
                                                  'G1 X' + roundNumber(rotateX(PRIME_START_X, CENTER_X, PRIME_START_Y, CENTER_Y, PRINT_DIR), 4) +
                                                      ' Y' + roundNumber(rotateY(PRIME_START_X, CENTER_X, PRIME_START_Y, CENTER_Y, PRINT_DIR), 4) +
                                                      ' F' + SPEED_MOVE + '\n' +

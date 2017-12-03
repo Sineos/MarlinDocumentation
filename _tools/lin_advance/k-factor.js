@@ -174,6 +174,12 @@ function gengcode() {
                                                  'G1 X' + roundNumber(rotateX(PRIME_END_X, CENTER_X, PRIME_END_Y, CENTER_Y, PRINT_DIR), 4) +
                                                      ' Y' + roundNumber(rotateY(PRIME_END_X, CENTER_X, PRIME_END_Y, CENTER_Y, PRINT_DIR), 4) +
                                                      ' E' + EXT_PRIME + ' F' + SPEED_SLOW + ' ; extrude some to start clean\n' +
+                                                 'G1 X' + roundNumber(rotateX(PRIME_END_X + (LINE_WIDTH * 1.5), CENTER_X, PRIME_END_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                   ' Y' + roundNumber(rotateY(PRIME_END_X + (LINE_WIDTH * 1.5), CENTER_X, PRIME_END_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                   ' E' + EXT_PRIME + ' F' + SPEED_SLOW + ' ; extrude some to start clean\n' +
+                                                 'G1 X' + roundNumber(rotateX(PRIME_END_X + (LINE_WIDTH * 1.5), CENTER_X, PRIME_START_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                   ' Y' + roundNumber(rotateY(PRIME_END_X + (LINE_WIDTH * 1.5), CENTER_X, PRIME_START_Y, CENTER_Y, PRINT_DIR), 4) +
+                                                   ' E' + EXT_PRIME + ' F' + SPEED_SLOW + ' ; extrude some to start clean\n' +													 
                                                  'G1 E-' + RETRACT_DIST + '\n';
 
     // if selected, print an anchor frame around test line start and end points

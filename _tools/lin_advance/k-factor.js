@@ -425,7 +425,7 @@ function rotateY(x, xm, y, ym, a) {
 }
 
 // toggle html elements
-$(document).ready(function() {
+$(window).load(function () {
   // Adapt textarea to cell size
   var TXTAREAHEIGHT = $('.txtareatd').height();
   $('.calibpat textarea').css({'height': (TXTAREAHEIGHT) + 'px'});

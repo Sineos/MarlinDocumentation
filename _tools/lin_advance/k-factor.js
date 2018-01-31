@@ -47,7 +47,8 @@ function genGcode() {
       EXT_MULT_PRIME = parseFloat(document.getElementById('PRIME_EXT').value),
       PRIME_DWELL = parseFloat(document.getElementById('DWELL_PRIME').value),
       LENGTH_SLOW = parseFloat(document.getElementById('SLOW_LENGTH').value),
-      LENGTH_FAST = parseFloat(document.getElementById('FAST_LENGTH').value);
+      LENGTH_FAST = parseFloat(document.getElementById('FAST_LENGTH').value),
+      USE_VELOCITY = document.getElementById('V_FACTOR').checked;
 
   // calculate some values for later use
   var RANGE_K = END_K - START_K,
@@ -65,7 +66,15 @@ function genGcode() {
       REF_START_Y = CENTER_Y + (PRINT_SIZE_Y / 2) - 20,
       REF_END_Y = CENTER_Y + (PRINT_SIZE_Y / 2),
       PAT_START_X = CENTER_X - (0.5 * LENGTH_FAST) - LENGTH_SLOW + (USE_PRIME ? 5 : 0),
-      PAT_START_Y = CENTER_Y - (PRINT_SIZE_Y / 2);
+      PAT_START_Y = CENTER_Y - (PRINT_SIZE_Y / 2),
+      DECIMALS = 0;
+
+  if (USE_VELOCITY) {
+    DECIMALS = getDecimals(STEP_K);
+    STEP_K = STEP_K * Math.pow(10, DECIMALS);
+    START_K = START_K * Math.pow(10, DECIMALS);
+    END_K = END_K * Math.pow(10, DECIMALS);
+  }
 
   // force height of textarea to td cell Height
   // for whatever reason IE will require a reload otherwise
@@ -73,7 +82,7 @@ function genGcode() {
   $('.calibpat textarea').css({'height': (TXTAREAHEIGHT) + 'px'});
 
   // Check if K-Factor Stepping is a multiple of the K-Factor Range
-  if (RANGE_K % STEP_K != 0) {
+  if ((END_K - START_K) % STEP_K != 0) {
     alert("Your K-Factor range cannot be cleanly divided. Check Start / End / Steps for the K-Factor");
     document.getElementById('textarea').value = '';
     return;
@@ -244,9 +253,10 @@ function genGcode() {
                                                 (ALT_PATTERN ? 'G1 E' + RETRACT_DIST + '\n' : '');
   var j = 0,
       k = 0;
+
   for (var i = START_K; i <= END_K; i += STEP_K) {
     if (ALT_PATTERN && (k % 2 == 0)) {
-      document.getElementById('textarea').value += 'M900 K' + i + ' ; set K-factor\n' +
+      document.getElementById('textarea').value += (USE_VELOCITY ? 'M900 V' + (i / Math.pow(10, DECIMALS)) + ' ; set V-factor\n' : 'M900 K' + i + ' ; set K-factor\n') +
                                                    'G1 X' + Math.round10(rotateX(PAT_START_X + LENGTH_SLOW, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), -4) +
                                                      ' Y' + Math.round10(rotateY(PAT_START_X + LENGTH_SLOW, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), -4) +
                                                      ' E' + EXT_SLOW + ' F' + SPEED_SLOW + '\n' +
@@ -262,7 +272,7 @@ function genGcode() {
       j += LINE_SPACING;
       k += 1;
     } else if (ALT_PATTERN && (k % 2 != 0)) {
-      document.getElementById('textarea').value += 'M900 K' + i + ' ; set K-factor\n' +
+      document.getElementById('textarea').value += (USE_VELOCITY ? 'M900 V' + (i / Math.pow(10, DECIMALS)) + ' ; set V-factor\n' : 'M900 K' + i + ' ; set K-factor\n') +
                                                    'G1 X' + Math.round10(rotateX(PAT_START_X + LENGTH_SLOW + LENGTH_FAST, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), -4) +
                                                      ' Y' + Math.round10(rotateY(PAT_START_X + LENGTH_SLOW + LENGTH_FAST, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), -4) +
                                                      ' E' + EXT_SLOW + ' F' + SPEED_SLOW + '\n' +
@@ -278,7 +288,7 @@ function genGcode() {
       j += LINE_SPACING;
       k += 1;
     } else {
-      document.getElementById('textarea').value += 'M900 K' + i + ' ; set K-factor\n' +
+      document.getElementById('textarea').value += (USE_VELOCITY ? 'M900 V' + (i / Math.pow(10, DECIMALS)) + ' ; set V-factor\n' : 'M900 K' + i + ' ; set K-factor\n') +
                                                    'G1 E' + RETRACT_DIST + '\n' +
                                                    'G1 X' + Math.round10(rotateX(PAT_START_X + LENGTH_SLOW, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), -4) +
                                                      ' Y' + Math.round10(rotateY(PAT_START_X + LENGTH_SLOW, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), -4) +
@@ -300,6 +310,7 @@ function genGcode() {
   document.getElementById('textarea').value += ';\n' +
                                                '; mark the test area for reference\n' +
                                                ';\n' +
+                                               (USE_VELOCITY ? 'M900 V0 ; set V-factor 0\n' : 'M900 K0 ; set K-factor 0\n') +
                                                (ALT_PATTERN ? 'G1 E-' + RETRACT_DIST + '\n' : '') +
                                                'G1 X' + Math.round10(rotateX(REF1_START_X, CENTER_X, REF_START_Y, CENTER_Y, PRINT_DIR), -4) +
                                                  ' Y' + Math.round10(rotateY(REF1_START_X, CENTER_X, REF_START_Y, CENTER_Y, PRINT_DIR), -4) +
@@ -398,6 +409,16 @@ function saveTextAsFile() {
   }
 }());
 
+// get the number of decimal places of a float
+function getDecimals(num) {
+  var match = (String(num)).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
+  if (!match) {
+    return num;
+  }
+  var decimalPlaces = Math.max(0, (match[1] ? match[1].length : 0) - (match[2] ? Number(match[2]) : 0));
+  return decimalPlaces;
+}
+
 // rotate x around a defined center xm, ym
 function rotateX(x, xm, y, ym, a) {
   a = a * Math.PI / 180; // Convert to radians
@@ -482,6 +503,31 @@ $(window).load(function () {
     } else {
       $('#PAT_ALT').prop('disabled', false);
       $('label[for=PAT_ALT]').css({opacity: 1});
+    }
+  });
+
+  // Change to Velocity
+  $('#V_FACTOR').change(function() {
+    if($(this).is(':checked')) {
+      $("#K_START").attr("step", "any");
+      $("#K_END").attr("step", "any");
+      $("#K_STEP").attr("step", "any");
+      $("#K_START").val("0");
+      $("#K_END").val("1");
+      $("#K_STEP").val("0.1");
+      $("label[for='K_START']").text("Starting Value for V:");
+      $("label[for='K_END']").text("Ending Value for V:");
+      $("label[for='K_STEP']").text("V-Factor Stepping:");
+    } else {
+      $("#K_START").attr("step", "1");
+      $("#K_END").attr("step", "1");
+      $("#K_STEP").attr("step", "1");
+      $("#K_START").val("0");
+      $("#K_END").val("100");
+      $("#K_STEP").val("5");
+      $("label[for='K_START']").text("Starting Value for K:");
+      $("label[for='K_END']").text("Ending Value for K:");
+      $("label[for='K_STEP']").text("K-Factor Stepping:");
     }
   });
 });

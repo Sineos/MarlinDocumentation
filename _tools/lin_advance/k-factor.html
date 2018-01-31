@@ -189,6 +189,12 @@ category:     [ tools ]
             <td><input name="DWELL_PRIME" type="number" id="DWELL_PRIME" step="0.1" tabindex="30" value="2"></td>
             <td>Inserts a pause of x seconds before starting the test pattern to bleed off any residual nozzle pressure</td>
           </tr>
+          <tr>
+            <td><label for="V_FACTOR">Use Velocity for K</label></td>
+            <td><input type="checkbox" name="V_FACTOR" id="V_FACTOR"></td>
+            <td>Use the new LIN_ADVANCE velocity factor V instead of K</td>
+            <td class="txtareatd">&nbsp;</td>
+          </tr>
           <tr class="calibpat2">
             <td colspan="3"><p>
                 <input name="button" type="button" id="button" tabindex="31" onclick="genGcode()" value="Generate G-code">

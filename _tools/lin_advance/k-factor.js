@@ -30,27 +30,48 @@ function genGcode() {
       SPEED_MOVE = parseInt(document.getElementById('MOVE_SPEED').value),
       ACCELERATION = parseInt(document.getElementById('PRINT_ACCL').value),
       RETRACT_DIST = parseFloat(document.getElementById('RETRACTION').value),
+      SELECT_SHAPE = document.getElementById('SHAPE_BED'),
+      BED_SHAPE = SELECT_SHAPE.options[SELECT_SHAPE.selectedIndex].value,
       BED_X = parseInt(document.getElementById('BEDSIZE_X').value),
       BED_Y = parseInt(document.getElementById('BEDSIZE_Y').value),
       NULL_CENTER = document.getElementById('CENTER_NULL').checked,
       HEIGHT_LAYER = parseFloat(document.getElementById('LAYER_HEIGHT').value),
       EXT_MULT = parseFloat(document.getElementById('EXTRUSION_MULT').value),
-      START_K = parseInt(document.getElementById('K_START').value),
-      END_K = parseInt(document.getElementById('K_END').value),
+      SELECT_FACTOR = document.getElementById('TYPE_FACTOR'),
+      FACTOR_TYPE = SELECT_FACTOR.options[SELECT_FACTOR.selectedIndex].value,
+      SELECT_PATTERN = document.getElementById('TYPE_PATTERN'),
+      PATTERN_TYPE = SELECT_PATTERN.options[SELECT_PATTERN.selectedIndex].value,
+      START_K = parseFloat(document.getElementById('K_START').value),
+      END_K = parseFloat(document.getElementById('K_END').value),
       STEP_K = parseFloat(document.getElementById('K_STEP').value),
+      JERK_X = parseFloat(document.getElementById('X_JERK').value),
+      JERK_Y = parseFloat(document.getElementById('Y_JERK').value),
+      JERK_Z = parseFloat(document.getElementById('Z_JERK').value),
+      JERK_E = parseFloat(document.getElementById('E_JERK').value),
       SELECT_DIR = document.getElementById('DIR_PRINT'),
       PRINT_DIR = SELECT_DIR.options[SELECT_DIR.selectedIndex].value,
+      CIRC_RES = parseFloat(document.getElementById('RES_CIRC').value),
       LINE_SPACING = parseFloat(document.getElementById('SPACE_LINE').value),
-      ALT_PATTERN = document.getElementById("PAT_ALT").checked,
+      //ALT_PATTERN = document.getElementById("PAT_ALT").checked,
       USE_FRAME = document.getElementById('FRAME').checked,
       USE_PRIME = document.getElementById('PRIME').checked,
       EXT_MULT_PRIME = parseFloat(document.getElementById('PRIME_EXT').value),
       PRIME_DWELL = parseFloat(document.getElementById('DWELL_PRIME').value),
       LENGTH_SLOW = parseFloat(document.getElementById('SLOW_LENGTH').value),
-      LENGTH_FAST = parseFloat(document.getElementById('FAST_LENGTH').value),
-      USE_VELOCITY = document.getElementById('V_FACTOR').checked;
+      LENGTH_FAST = parseFloat(document.getElementById('FAST_LENGTH').value);
 
   // calculate some values for later use
+  var DECIMALS = 0;
+  if (FACTOR_TYPE == 'V') {
+    DECIMALS = getDecimals(STEP_K);
+    STEP_K *= Math.pow(10, DECIMALS);
+    START_K *= Math.pow(10, DECIMALS);
+    END_K *= Math.pow(10, DECIMALS);
+  }
+  if (BED_SHAPE == 'Round') {
+    BED_Y = BED_X;
+  }
+
   var RANGE_K = END_K - START_K,
       LINE_WIDTH = NOZZLE_DIAMETER * NOZZLE_LINE_RATIO,
       PRINT_SIZE_Y = (RANGE_K / STEP_K * LINE_SPACING) + 25, // +25 with ref marking
@@ -67,23 +88,11 @@ function genGcode() {
       REF_END_Y = CENTER_Y + (PRINT_SIZE_Y / 2),
       PAT_START_X = CENTER_X - (0.5 * LENGTH_FAST) - LENGTH_SLOW + (USE_PRIME ? 5 : 0),
       PAT_START_Y = CENTER_Y - (PRINT_SIZE_Y / 2),
-      DECIMALS = 0;
-
-  if (USE_VELOCITY) {
-    DECIMALS = getDecimals(STEP_K);
-    STEP_K = STEP_K * Math.pow(10, DECIMALS);
-    START_K = START_K * Math.pow(10, DECIMALS);
-    END_K = END_K * Math.pow(10, DECIMALS);
-  }
-
-  // force height of textarea to td cell Height
-  // for whatever reason IE will require a reload otherwise
-  var TXTAREAHEIGHT = $('.txtareatd').height();
-  $('.calibpat textarea').css({'height': (TXTAREAHEIGHT) + 'px'});
+      CIRC_SEG = 2 * Math.PI / CIRC_RES;
 
   // Check if K-Factor Stepping is a multiple of the K-Factor Range
-  if ((END_K - START_K) % STEP_K != 0) {
-    alert("Your K-Factor range cannot be cleanly divided. Check Start / End / Steps for the K-Factor");
+  if (RANGE_K % STEP_K != 0) {
+    alert("Your K-Factor range cannot be cleanly divided. Check Start / End / Steps for the Pattern");
     document.getElementById('textarea').value = '';
     return;
   }
@@ -94,13 +103,18 @@ function genGcode() {
       FIT_HEIGHT = Math.abs(PRINT_SIZE_X * Math.sin(PRINT_DIR_RAD)) + Math.abs(PRINT_SIZE_Y * Math.cos(PRINT_DIR_RAD));
 
   // Compare the fit rectangle with the bed size. Safety margin 5 mm
-  if (FIT_WIDTH > BED_X - 5) {
-    if (!confirm('Your K-Factor settings exceed your X bed size. Check Start / End / Steps for the K-Factor. \n OK to continue, Cancel to return')) {
+  if (BED_SHAPE == "Round" && (Math.sqrt(Math.pow(FIT_WIDTH, 2) + Math.pow(FIT_HEIGHT, 2)) > BED_X - 5)) {
+    if (!confirm('Your Pattern settings exceed your bed\'s diameter. Check Start / End / Steps for the Pattern. \n OK to continue, Cancel to return')) {
+      document.getElementById('textarea').value = '';
+      return;
+    }
+  } else if (FIT_WIDTH > BED_X - 5) {
+    if (!confirm('Your Pattern settings exceed your X bed size. Check Start / End / Steps for the Pattern. \n OK to continue, Cancel to return')) {
       document.getElementById('textarea').value = '';
       return;
     }
   } else if (FIT_HEIGHT > BED_Y - 5) {
-    if (!confirm('Your K-Factor settings exceed your Y bed size. Check Start / End / Steps for the K-Factor. \n OK to continue, Cancel to return')) {
+    if (!confirm('Your Pattern settings exceed your Y bed size. Check Start / End / Steps for the Pattern. \n OK to continue, Cancel to return')) {
       document.getElementById('textarea').value = '';
       return;
     }
@@ -129,37 +143,52 @@ function genGcode() {
                                               '; -------------------------------------------\n' +
                                               ';\n' +
                                               '; Created: ' + new Date() + '\n' +
-                                              '; Settings:\n' +
-                                              '; Print Size X = ' + FIT_WIDTH + ' mm\n' +
-                                              '; Print Size Y = ' + FIT_HEIGHT + ' mm\n' +
-                                              '; Print Rotation = ' + PRINT_DIR + ' degree\n' +
-                                              '; Print Pattern = ' + (ALT_PATTERN ? "Alternate" : "Standard") + '\n' +
-                                              '; Print Frame = ' + (USE_FRAME ? "true" : "false") + '\n' +
-                                              '; Prime Nozzle = ' + (USE_PRIME ? "true" : "false") + '\n' +
-                                              '; Prime Extrusion Multiplier = ' + EXT_MULT_PRIME + '\n' +
-                                              '; Dwell Time = ' + PRIME_DWELL + ' s\n' +
+                                              ';\n' +
+                                              '; Settings Printer:\n' +
                                               '; Filament Diameter = ' + FILAMENT_DIAMETER + ' mm\n' +
                                               '; Nozzle Diameter = ' + NOZZLE_DIAMETER + ' mm\n' +
                                               '; Nozzle Temperature = ' + NOZZLE_TEMP + ' °C\n' +
-                                              '; Nozzle / Line Ratio = ' + NOZZLE_LINE_RATIO + '\n' +
                                               '; Bed Temperature = ' + BED_TEMP + ' °C\n' +
+                                              '; Retraction Distance = ' + RETRACT_DIST + ' mm\n' +
+                                              '; Layer Height = ' + HEIGHT_LAYER + ' mm\n' +
+                                              ';\n' +
+                                              '; Settings Print Bed:\n' +
+                                              '; Bed Shape = ' + BED_SHAPE + '\n' +
+                                              (BED_SHAPE == 'Round' ? '; Bed Diameter = ' + BED_X + ' mm\n' : '; Bed Size X = ' + BED_X + ' mm\n') +
+                                              (BED_SHAPE == 'Round' ? '' : '; Bed Size Y = ' + BED_Y + ' mm\n') +
+                                              '; Origin Bed Center = ' + (NULL_CENTER ? "true" : "false") + '\n' +
+                                              ';\n' +
+                                              '; Settings Speed:\n' +
                                               '; Slow Printing Speed = ' + SPEED_SLOW + ' mm/min\n' +
                                               '; Fast Printing Speed = ' + SPEED_FAST + ' mm/min\n' +
-                                              '; Printing Acceleration = ' + ACCELERATION + ' mm/s^2\n' +
                                               '; Movement Speed = ' + SPEED_MOVE + ' mm/min\n' +
-                                              '; Use BL = ' + (document.getElementById('USE_BL').checked ? "true" : "false") + '\n' +
-                                              '; Retraction Distance = ' + RETRACT_DIST + ' mm\n' +
-                                              '; Bed Size X = ' + BED_X + ' mm\n' +
-                                              '; Bed Size Y = ' + BED_Y + ' mm\n' +
-                                              '; Origin Bed Center = ' + (NULL_CENTER ? "true" : "false") + '\n' +
-                                              '; Layer Height = ' + HEIGHT_LAYER + ' mm\n' +
-                                              '; Extrusion Multiplier = ' + EXT_MULT + '\n' +
-                                              '; Starting Value K-Factor = ' + START_K + '\n' +
-                                              '; Ending value K-Factor = ' + END_K + '\n' +
-                                              '; K-Factor Stepping = ' + STEP_K + '\n' +
+                                              '; Printing Acceleration = ' + ACCELERATION + ' mm/s^2\n' +
+                                              '; Jerk X-axis = ' + (JERK_X != '-1' ? JERK_X + '\n': ' firmware default\n') +
+                                              '; Jerk Y-axis = ' + (JERK_Y != '-1' ? JERK_Y + '\n': ' firmware default\n') +
+                                              '; Jerk Z-axis = ' + (JERK_Z != '-1' ? JERK_Z + '\n': ' firmware default\n') +
+                                              '; Jerk Extruder = ' + (JERK_E != '-1' ? JERK_E + '\n': ' firmware default\n') +
+                                              ';\n' +
+                                              '; Settings Pattern:\n' +
+                                              (FACTOR_TYPE == 'V' ? '; Linear Advance Factor = Velocity\n' : '; Linear Advance Factor = K-Factor\n') +
+                                              '; Starting Value Factor = ' + (FACTOR_TYPE == "V" ? START_K / Math.pow(10, DECIMALS) : START_K) + '\n' +
+                                              '; Ending Value Factor = ' + (FACTOR_TYPE == "V" ? END_K / Math.pow(10, DECIMALS) : END_K) + '\n' +
+                                              '; Factor Stepping = ' + (FACTOR_TYPE == "V" ? STEP_K / Math.pow(10, DECIMALS) : STEP_K) + '\n' +
                                               '; Test Line Spacing = ' + STEP_K + ' mm\n' +
                                               '; Test Line Length Slow = ' + LENGTH_SLOW + ' mm\n' +
                                               '; Test Line Length Fast = ' + LENGTH_FAST + ' mm\n' +
+                                              //'; Print Pattern = ' + (ALT_PATTERN ? "Alternate" : "Standard") + '\n' +
+                                              '; Print Frame = ' + (USE_FRAME ? "true" : "false") + '\n' +
+                                              '; Print Size X = ' + FIT_WIDTH + ' mm\n' +
+                                              '; Print Size Y = ' + FIT_HEIGHT + ' mm\n' +
+                                              '; Print Rotation = ' + PRINT_DIR + ' degree\n' +
+                                              ';\n' +
+                                              '; Settings Advance:\n' +
+                                              '; Nozzle / Line Ratio = ' + NOZZLE_LINE_RATIO + '\n' +
+                                              '; Use BL = ' + (document.getElementById('USE_BL').checked ? "true" : "false") + '\n' +
+                                              '; Extrusion Multiplier = ' + EXT_MULT + '\n' +
+                                              '; Prime Nozzle = ' + (USE_PRIME ? "true" : "false") + '\n' +
+                                              '; Prime Extrusion Multiplier = ' + EXT_MULT_PRIME + '\n' +
+                                              '; Dwell Time = ' + PRIME_DWELL + ' s\n' +
                                               ';\n' +
                                               '; prepare printing\n' +
                                               ';\n' +
@@ -175,6 +204,10 @@ function genGcode() {
   document.getElementById('textarea').value += 'M109 S' + NOZZLE_TEMP + ' ; block waiting for nozzle temp\n' +
                                                'G21 ; set units to millimeters\n' +
                                                'M204 P' + ACCELERATION + ' ; set acceleration\n' +
+                                               (JERK_X != '-1' ? 'M205 X' + JERK_X + ' ; set X jerk\n' : '') +
+                                               (JERK_Y != '-1' ? 'M205 Y' + JERK_Y + ' ; set Y jerk\n' : '') +
+                                               (JERK_Z != '-1' ? 'M205 Z' + JERK_Z + ' ; set Z jerk\n' : '') +
+                                               (JERK_E != '-1' ? 'M205 E' + JERK_E + ' ; set E jerk\n' : '') +
                                                'G90 ; use absolute coordinates\n' +
                                                'M83 ; use relative distances for extrusion\n' +
                                                'G92 E0 ; reset extruder distance\n';
@@ -249,14 +282,14 @@ function genGcode() {
                                                'G1 X' + Math.round10(rotateX(PAT_START_X, CENTER_X, PAT_START_Y, CENTER_Y, PRINT_DIR), -4) +
                                                  ' Y' + Math.round10(rotateY(PAT_START_X, CENTER_X, PAT_START_Y, CENTER_Y, PRINT_DIR), -4) +
                                                  ' F' + SPEED_MOVE + ' ; move to pattern start\n' +
-                                                (USE_PRIME || USE_FRAME ? '' : 'G1 Z' + HEIGHT_LAYER + ' F' + SPEED_SLOW + ' ; move to layer height\n') +
-                                                (ALT_PATTERN ? 'G1 E' + RETRACT_DIST + '\n' : '');
+                                                (USE_PRIME || USE_FRAME ? '' : 'G1 Z' + HEIGHT_LAYER + ' F' + SPEED_SLOW + ' ; move to layer height\n');
+//                                                (ALT_PATTERN ? 'G1 E' + RETRACT_DIST + '\n' : '');
   var j = 0,
       k = 0;
 
   for (var i = START_K; i <= END_K; i += STEP_K) {
-    if (ALT_PATTERN && (k % 2 == 0)) {
-      document.getElementById('textarea').value += (USE_VELOCITY ? 'M900 V' + (i / Math.pow(10, DECIMALS)) + ' ; set V-factor\n' : 'M900 K' + i + ' ; set K-factor\n') +
+    if (PATTERN_TYPE == "alt" && (k % 2 == 0)) {
+      document.getElementById('textarea').value += (FACTOR_TYPE == 'V' ? 'M900 V' + (i / Math.pow(10, DECIMALS)) + ' ; set V-factor\n' : 'M900 K' + i + ' ; set K-factor\n') +
                                                    'G1 X' + Math.round10(rotateX(PAT_START_X + LENGTH_SLOW, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), -4) +
                                                      ' Y' + Math.round10(rotateY(PAT_START_X + LENGTH_SLOW, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), -4) +
                                                      ' E' + EXT_SLOW + ' F' + SPEED_SLOW + '\n' +
@@ -271,8 +304,8 @@ function genGcode() {
                                                      ' E' + EXT_ALT + ' F' + SPEED_FAST + '\n';
       j += LINE_SPACING;
       k += 1;
-    } else if (ALT_PATTERN && (k % 2 != 0)) {
-      document.getElementById('textarea').value += (USE_VELOCITY ? 'M900 V' + (i / Math.pow(10, DECIMALS)) + ' ; set V-factor\n' : 'M900 K' + i + ' ; set K-factor\n') +
+    } else if (PATTERN_TYPE == "alt" && (k % 2 != 0)) {
+      document.getElementById('textarea').value += (FACTOR_TYPE == 'V' ? 'M900 V' + (i / Math.pow(10, DECIMALS)) + ' ; set V-factor\n' : 'M900 K' + i + ' ; set K-factor\n') +
                                                    'G1 X' + Math.round10(rotateX(PAT_START_X + LENGTH_SLOW + LENGTH_FAST, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), -4) +
                                                      ' Y' + Math.round10(rotateY(PAT_START_X + LENGTH_SLOW + LENGTH_FAST, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), -4) +
                                                      ' E' + EXT_SLOW + ' F' + SPEED_SLOW + '\n' +
@@ -287,8 +320,8 @@ function genGcode() {
                                                      ' E' + EXT_ALT + ' F' + SPEED_FAST + '\n';
       j += LINE_SPACING;
       k += 1;
-    } else {
-      document.getElementById('textarea').value += (USE_VELOCITY ? 'M900 V' + (i / Math.pow(10, DECIMALS)) + ' ; set V-factor\n' : 'M900 K' + i + ' ; set K-factor\n') +
+    } else if (PATTERN_TYPE == "std") {
+      document.getElementById('textarea').value += (FACTOR_TYPE == 'V' ? 'M900 V' + (i / Math.pow(10, DECIMALS)) + ' ; set V-factor\n' : 'M900 K' + i + ' ; set K-factor\n') +
                                                    'G1 E' + RETRACT_DIST + '\n' +
                                                    'G1 X' + Math.round10(rotateX(PAT_START_X + LENGTH_SLOW, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), -4) +
                                                      ' Y' + Math.round10(rotateY(PAT_START_X + LENGTH_SLOW, CENTER_X, PAT_START_Y + j, CENTER_Y, PRINT_DIR), -4) +
@@ -304,14 +337,41 @@ function genGcode() {
                                                      ' Y' + Math.round10(rotateY(PAT_START_X, CENTER_X, PAT_START_Y + j + LINE_SPACING, CENTER_Y, PRINT_DIR), -4) +
                                                      ' F' + SPEED_MOVE + '\n' : '');
       j += LINE_SPACING;
+    } else if (PATTERN_TYPE == "circ") {
+      var angle = 0,
+          end = Math.PI * 2;
+      document.getElementById('textarea').value += 'G1 X' + Math.round10((Math.cos(0) * j) + CENTER_X, -4) +
+                                                     ' Y' + Math.round10((Math.sin(0) * j) + CENTER_X, -4) +
+                                                     ' F' + SPEED_MOVE + '\n' +
+                                                   (FACTOR_TYPE == 'V' ? 'M900 V' + (i / Math.pow(10, DECIMALS)) + ' ; set V-factor\n' : 'M900 K' + i + ' ; set K-factor\n');
+      for (angle=0; angle < end; angle += CIRC_SEG) {
+        if (angle <= end * (1/4)) {
+          document.getElementById('textarea').value += 'G1 X' + Math.round10((Math.cos(angle) * j) + CENTER_X, -4) +
+            ' Y' + Math.round10((Math.sin(angle) * j) + CENTER_X, -4) +
+            ' E' + EXT_SLOW + ' F' + SPEED_SLOW + '\n';
+        } else if (angle > end * (1/4) && angle <= end * (2/4)) {
+          document.getElementById('textarea').value += 'G1 X' + Math.round10((Math.cos(angle) * j) + CENTER_X, -4) +
+            ' Y' + Math.round10((Math.sin(angle) * j) + CENTER_X, -4) +
+            ' E' + EXT_FAST + ' F' + SPEED_FAST + '\n';
+        } else if (angle > end * (2/4) && angle <= end * (3/4)) {
+          document.getElementById('textarea').value += 'G1 X' + Math.round10((Math.cos(angle) * j) + CENTER_X, -4) +
+            ' Y' + Math.round10((Math.sin(angle) * j) + CENTER_X, -4) +
+            ' E' + EXT_SLOW + ' F' + SPEED_SLOW + '\n';
+        } else {
+          document.getElementById('textarea').value += 'G1 X' + Math.round10((Math.cos(angle) * j) + CENTER_X, -4) +
+            ' Y' + Math.round10((Math.sin(angle) * j) + CENTER_X, -4) +
+            ' E' + EXT_FAST + ' F' + SPEED_FAST + '\n';
+        }
+      }
+      j += LINE_SPACING;
     }
   }
   // mark area of speed changes and close G-code
   document.getElementById('textarea').value += ';\n' +
                                                '; mark the test area for reference\n' +
                                                ';\n' +
-                                               (USE_VELOCITY ? 'M900 V0 ; set V-factor 0\n' : 'M900 K0 ; set K-factor 0\n') +
-                                               (ALT_PATTERN ? 'G1 E-' + RETRACT_DIST + '\n' : '') +
+                                               (FACTOR_TYPE == 'V' ? 'M900 V0 ; set V-factor 0\n' : 'M900 K0 ; set K-factor 0\n') +
+//                                               (ALT_PATTERN ? 'G1 E-' + RETRACT_DIST + '\n' : '') +
                                                'G1 X' + Math.round10(rotateX(REF1_START_X, CENTER_X, REF_START_Y, CENTER_Y, PRINT_DIR), -4) +
                                                  ' Y' + Math.round10(rotateY(REF1_START_X, CENTER_X, REF_START_Y, CENTER_Y, PRINT_DIR), -4) +
                                                  ' F' + SPEED_MOVE + '\n' +
@@ -335,8 +395,8 @@ function genGcode() {
                                                'M140 S0 ; turn off bed\n' +
                                                'G1 Z30 X' + (NULL_CENTER ? BED_X / 2 : BED_X) + ' Y' + (NULL_CENTER ? BED_Y / 2 : BED_Y) + ' F' + SPEED_MOVE + ' ; move away from the print\n' +
                                                'M84 ; disable motors\n' +
-                                               'M502 ; resets parameters from ROM (for those who do not have an EEPROM)\n' +
-                                               'M501 ; resets parameters from EEPROM (preferably)\n' +
+                                               'M502 ; resets parameters from ROM\n' +
+                                               'M501 ; resets parameters from EEPROM\n' +
                                                ';';
 }
 
@@ -451,12 +511,16 @@ $(window).load(function () {
   var TXTAREAHEIGHT = $('.txtareatd').height();
   $('.calibpat textarea').css({'height': (TXTAREAHEIGHT) + 'px'});
 
+  $(":input:not(:hidden)").each(function (i) {
+    $(this).attr('tabindex', i + 1);
+  });
+
   // toggle between mm/s and mm/min speeds
   $('#MM_S').change(function() {
     var SPEED_SLOW = $('#SLOW_SPEED').val(),
         SPEED_FAST = $('#FAST_SPEED').val(),
         SPEED_MOVE = $('#MOVE_SPEED').val();
-    if($(this).is(':checked')) {
+    if ($(this).is(':checked')) {
       SPEED_SLOW = $('#SLOW_SPEED').val();
       SPEED_FAST = $('#FAST_SPEED').val();
       SPEED_MOVE = $('#MOVE_SPEED').val();
@@ -473,9 +537,26 @@ $(window).load(function () {
     }
   });
 
+  // Toggle Bed Shape
+  $('#SHAPE_BED').change(function() {
+    if ($(this).val() == 'Round') {
+      $("label[for='BEDSIZE_X']").text("Bed Diameter:");
+      $("#shape").text("Diameter (mm) of the bed");
+      $('#BEDSIZE_Y').prop('disabled', true);
+      $('label[for=BEDSIZE_Y]').css({opacity: 0.5});
+      $("#CENTER_NULL").prop("checked", !$("#CENTER_NULL").prop("checked"));
+    } else {
+      $("label[for='BEDSIZE_X']").text("Bed Size X:");
+      $("#shape").text("Size (mm) of the bed in X");
+      $('#BEDSIZE_Y').prop('disabled', false);
+      $('label[for=BEDSIZE_Y]').css({opacity: 1});
+      $("#CENTER_NULL").prop("checked", !$("#CENTER_NULL").prop("checked"));
+    }
+  });
+
   // toggle prime relevant html elements
   $('#PRIME').change(function() {
-    if($(this).is(':checked')) {
+    if ($(this).is(':checked')) {
       $('#PRIME_EXT').prop('disabled', false);
       $('label[for=PRIME_EXT]').css({opacity: 1});
     } else {
@@ -486,7 +567,7 @@ $(window).load(function () {
 
   // frame and alternate pattern are mutually exclusive
   $('#PAT_ALT').change(function() {
-    if($(this).is(':checked')) {
+    if ($(this).is(':checked')) {
       $('#FRAME').prop('checked', false);
       $('#FRAME').prop('disabled', true);
       $('label[for=FRAME]').css({opacity: 0.5});
@@ -496,7 +577,7 @@ $(window).load(function () {
     }
   });
   $('#FRAME').change(function() {
-    if($(this).is(':checked')) {
+    if ($(this).is(':checked')) {
       $('#PAT_ALT').prop('checked', false);
       $('#PAT_ALT').prop('disabled', true);
       $('label[for=PAT_ALT]').css({opacity: 0.5});
@@ -506,28 +587,35 @@ $(window).load(function () {
     }
   });
 
-  // Change to Velocity
-  $('#V_FACTOR').change(function() {
-    if($(this).is(':checked')) {
+  // Change factor type
+  $('#TYPE_FACTOR').change(function() {
+    if ($(this).val() == 'V') {
       $("#K_START").attr("step", "any");
       $("#K_END").attr("step", "any");
       $("#K_STEP").attr("step", "any");
       $("#K_START").val("0");
-      $("#K_END").val("1");
-      $("#K_STEP").val("0.1");
+      $("#K_END").val("2");
+      $("#K_STEP").val("0.2");
       $("label[for='K_START']").text("Starting Value for V:");
       $("label[for='K_END']").text("Ending Value for V:");
       $("label[for='K_STEP']").text("V-Factor Stepping:");
+      $("#start_factor").text("Starting value for the V-factor. Usually 0 but for bowden setups you might want to start higher, e.g. 30");
+      $("#end_factor").text("Ending value of the V-factor. Bowden setups may be higher than 100");
+      $("#step_factor").text("Stepping of the V-factor in the test pattern. Needs to be an exact divisor of the V-factor Range (End - Start)");
     } else {
       $("#K_START").attr("step", "1");
       $("#K_END").attr("step", "1");
       $("#K_STEP").attr("step", "1");
+      $("#K_STEP").attr("value", "5");
       $("#K_START").val("0");
       $("#K_END").val("100");
       $("#K_STEP").val("5");
       $("label[for='K_START']").text("Starting Value for K:");
       $("label[for='K_END']").text("Ending Value for K:");
       $("label[for='K_STEP']").text("K-Factor Stepping:");
+      $("#start_factor").text("Starting value for the K-factor. Usually 0 but for bowden setups you might want to start higher, e.g. 30");
+      $("#end_factor").text("Ending value of the K-factor. Bowden setups may be higher than 100");
+      $("#step_factor").text("Stepping of the K-factor in the test pattern. Needs to be an exact divisor of the K-factor Range (End - Start)");
     }
   });
 });

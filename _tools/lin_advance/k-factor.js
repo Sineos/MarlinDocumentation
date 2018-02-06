@@ -505,6 +505,12 @@ function rotateY(x, xm, y, ym, a) {
   return yr;
 }
 
+// Calculate circle packing in rectangle
+function circleRectPacking(sizeX, sizeY, radius, spacing, shiftX, shiftY) {
+  nx = Math.floor10((sizeX +spacing) / ((2 * radius) + spacing));
+  ny = Math.floor10((sizeY +spacing) / ((2 * radius) + spacing));
+}
+
 // toggle html elements
 $(window).load(function () {
   // Adapt textarea to cell size

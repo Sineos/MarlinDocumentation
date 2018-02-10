@@ -51,6 +51,7 @@ function genGcode() {
       SELECT_DIR = document.getElementById('DIR_PRINT'),
       PRINT_DIR = SELECT_DIR.options[SELECT_DIR.selectedIndex].value,
       CIRC_RES = parseFloat(document.getElementById('RES_CIRC').value),
+      CIRC_RADIUS = parseFloat(document.getElementById('RAD_CIRC').value),
       LINE_SPACING = parseFloat(document.getElementById('SPACE_LINE').value),
       //ALT_PATTERN = document.getElementById("PAT_ALT").checked,
       USE_FRAME = document.getElementById('FRAME').checked,
@@ -135,7 +136,8 @@ function genGcode() {
       EXT_FAST = Math.round10(EXTRUSION_RATIO * EXT_MULT * LENGTH_FAST, -4),
       EXT_ALT = Math.round10(EXTRUSION_RATIO * EXT_MULT * LINE_SPACING, -4),
       EXT_FRAME1 = Math.round10(EXTRUSION_RATIO * EXT_MULT * (PRINT_SIZE_Y - 19), -4),
-      EXT_FRAME2 = Math.round10(EXTRUSION_RATIO * EXT_MULT * LINE_WIDTH, -4);
+      EXT_FRAME2 = Math.round10(EXTRUSION_RATIO * EXT_MULT * LINE_WIDTH, -4),
+      EXT_SEGMENT = Math.round10(EXTRUSION_RATIO * EXT_MULT * (2 * CIRC_RADIUS * Math.sin(((360 / CIRC_RES / 2) * Math.PI / 180))), -4);
 
   // Start G-code for test pattern
   document.getElementById('textarea').value = '';
@@ -337,35 +339,29 @@ function genGcode() {
                                                      ' Y' + Math.round10(rotateY(PAT_START_X, CENTER_X, PAT_START_Y + j + LINE_SPACING, CENTER_Y, PRINT_DIR), -4) +
                                                      ' F' + SPEED_MOVE + '\n' : '');
       j += LINE_SPACING;
-    } else if (PATTERN_TYPE == "circ") {
-      var angle = 0,
-          end = Math.PI * 2;
-      document.getElementById('textarea').value += 'G1 X' + Math.round10((Math.cos(0) * j) + CENTER_X, -4) +
-                                                     ' Y' + Math.round10((Math.sin(0) * j) + CENTER_X, -4) +
-                                                     ' F' + SPEED_MOVE + '\n' +
-                                                   (FACTOR_TYPE == 'V' ? 'M900 V' + (i / Math.pow(10, DECIMALS)) + ' ; set V-factor\n' : 'M900 K' + i + ' ; set K-factor\n');
-      for (angle=0; angle < end; angle += CIRC_SEG) {
-        if (angle <= end * (1/4)) {
-          document.getElementById('textarea').value += 'G1 X' + Math.round10((Math.cos(angle) * j) + CENTER_X, -4) +
-            ' Y' + Math.round10((Math.sin(angle) * j) + CENTER_X, -4) +
-            ' E' + EXT_SLOW + ' F' + SPEED_SLOW + '\n';
-        } else if (angle > end * (1/4) && angle <= end * (2/4)) {
-          document.getElementById('textarea').value += 'G1 X' + Math.round10((Math.cos(angle) * j) + CENTER_X, -4) +
-            ' Y' + Math.round10((Math.sin(angle) * j) + CENTER_X, -4) +
-            ' E' + EXT_FAST + ' F' + SPEED_FAST + '\n';
-        } else if (angle > end * (2/4) && angle <= end * (3/4)) {
-          document.getElementById('textarea').value += 'G1 X' + Math.round10((Math.cos(angle) * j) + CENTER_X, -4) +
-            ' Y' + Math.round10((Math.sin(angle) * j) + CENTER_X, -4) +
-            ' E' + EXT_SLOW + ' F' + SPEED_SLOW + '\n';
-        } else {
-          document.getElementById('textarea').value += 'G1 X' + Math.round10((Math.cos(angle) * j) + CENTER_X, -4) +
-            ' Y' + Math.round10((Math.sin(angle) * j) + CENTER_X, -4) +
-            ' E' + EXT_FAST + ' F' + SPEED_FAST + '\n';
-        }
-      }
-      j += LINE_SPACING;
     }
   }
+
+  if (PATTERN_TYPE == "circ") {
+    var circles = circleRectPacking(BED_X, BED_Y, CIRC_RADIUS, 3, CENTER_X, CENTER_Y, 10, 10),
+        midPointX = null,
+        midPointY = null;
+
+    for (var ii = 0; ii < circles.length; ii += 1) {
+      for(var key in circles[ii]){
+        if(circles[ii].hasOwnProperty(key)) {
+          for(var val in circles[ii][key]){
+            if(circles[ii][key].hasOwnProperty(val)) {
+              midPointX = circles[ii][key][val]["x"];
+              midPointY = circles[ii][key][val]["y"];
+              document.getElementById('textarea').value += circlePattern(midPointX, midPointY, CIRC_RADIUS, CIRC_SEG, SPEED_SLOW, SPEED_FAST, SPEED_MOVE, EXT_SEGMENT);
+            }
+          }
+        }
+      }
+    }
+  }
+
   // mark area of speed changes and close G-code
   document.getElementById('textarea').value += ';\n' +
                                                '; mark the test area for reference\n' +
@@ -506,9 +502,73 @@ function rotateY(x, xm, y, ym, a) {
 }
 
 // Calculate circle packing in rectangle
-function circleRectPacking(sizeX, sizeY, radius, spacing, shiftX, shiftY) {
-  nx = Math.floor10((sizeX +spacing) / ((2 * radius) + spacing));
-  ny = Math.floor10((sizeY +spacing) / ((2 * radius) + spacing));
+function circleRectPacking(sizeX, sizeY, radius, spacing, xm, ym, offsetX, offsetY) {
+  var midpoints = [],
+      rows = [],
+      i = 0,
+      j = 0,
+      xx = 0,
+      yy = 0,
+      nx = Math.floor10((sizeX - (2 * offsetX) + spacing) / ((2 * radius) + spacing)),
+      ny = Math.floor10((sizeY - (2 * offsetY) + spacing) / ((2 * radius) + spacing));
+
+  if (xm == 0 && ym == 0) {
+    while (i < ny) {
+      j = 0;
+      while (j < nx) {
+        xx = -(sizeX * 0.5) + offsetX + (((2 * j) + 1) * radius) + (j ? j * spacing : 0);
+        yy = -(sizeY * 0.5) + offsetY + (((2 * i) + 1) * radius) + (i ? i * spacing : 0);
+        midpoints.push({x: xx, y: yy});
+        j += 1;
+      }
+      rows.push({row: midpoints.concat()});
+      midpoints.length = 0;
+      i += 1;
+    }
+  } else {
+    while (i < ny) {
+      j = 0;
+      while (j < nx) {
+        xx = 0 + offsetX + (((2 * j) + 1) * radius) + (j ? j * spacing : 0);
+        yy = 0 + offsetY + (((2 * i) + 1) * radius) + (i ? i * spacing : 0);
+        midpoints.push({x: xx, y: yy});
+        j += 1;
+      }
+      rows.push({row: midpoints.concat()});
+      midpoints.length = 0;
+      i += 1;
+    }
+  }
+  return rows;
+}
+
+function circlePattern(x, y, radius, seg, slow, fast, move, ext) {
+  var gcode = '',
+      end = 2 * Math.PI;
+
+  gcode += 'G1 X' + (x + radius) +
+           ' Y' + y +
+           ' F' + move + '\n';
+  for (var angle=0; angle < end; angle += seg) {
+    if (angle <= end * (1/4)) {
+      gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
+               ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
+               ' E' + ext + ' F' + slow + '\n';
+    } else if (angle > end * (1/4) && angle <= end * (2/4)) {
+      gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
+               ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
+               ' E' + ext + ' F' + fast + '\n';
+    } else if (angle > end * (2/4) && angle <= end * (3/4)) {
+      gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
+               ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
+               ' E' + ext + ' F' + slow + '\n';
+    } else {
+      gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
+               ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
+               ' E' + ext + ' F' + fast + '\n';
+    }
+  }
+  return gcode;
 }
 
 // toggle html elements

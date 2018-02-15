@@ -61,6 +61,12 @@ function genGcode() {
       LENGTH_SLOW = parseFloat(document.getElementById('SLOW_LENGTH').value),
       LENGTH_FAST = parseFloat(document.getElementById('FAST_LENGTH').value);
 
+    var speeds = {"slow": SPEED_SLOW,
+      "fast": SPEED_FAST,
+      "move": SPEED_MOVE
+    },
+       coords = {}
+
   // calculate some values for later use
   var DECIMALS = 0;
   if (FACTOR_TYPE == 'V') {
@@ -88,8 +94,7 @@ function genGcode() {
       REF_START_Y = CENTER_Y + (PRINT_SIZE_Y / 2) - 20,
       REF_END_Y = CENTER_Y + (PRINT_SIZE_Y / 2),
       PAT_START_X = CENTER_X - (0.5 * LENGTH_FAST) - LENGTH_SLOW + (USE_PRIME ? 5 : 0),
-      PAT_START_Y = CENTER_Y - (PRINT_SIZE_Y / 2),
-      CIRC_SEG = 2 * Math.PI / CIRC_RES;
+      PAT_START_Y = CENTER_Y - (PRINT_SIZE_Y / 2);
 
   // Check if K-Factor Stepping is a multiple of the K-Factor Range
   if (RANGE_K % STEP_K != 0) {
@@ -139,6 +144,16 @@ function genGcode() {
       EXT_FRAME2 = Math.round10(EXTRUSION_RATIO * EXT_MULT * LINE_WIDTH, -4),
       EXT_SEGMENT = Math.round10(EXTRUSION_RATIO * EXT_MULT * (2 * CIRC_RADIUS * Math.sin(((360 / CIRC_RES / 2) * Math.PI / 180))), -4);
 
+ var basicParams = {"slow": SPEED_SLOW,
+   "fast": SPEED_FAST,
+   "move": SPEED_MOVE,
+   "centerX": (NULL_CENTER ? 0 : BED_X / 2),
+   "centerY": (NULL_CENTER ? 0 : BED_Y / 2),
+   "printDir": PRINT_DIR,
+   "lineWidth": LINE_WIDTH,
+   "extRatio": EXTRUSION_RATIO,
+
+ }
   // Start G-code for test pattern
   document.getElementById('textarea').value = '';
   document.getElementById('textarea').value = '; ### Marlin K-Factor Calibration Pattern ###\n' +
@@ -354,14 +369,14 @@ function genGcode() {
             if(circles[ii][key].hasOwnProperty(val)) {
               midPointX = circles[ii][key][val]["x"];
               midPointY = circles[ii][key][val]["y"];
-              document.getElementById('textarea').value += circlePattern(midPointX, midPointY, CIRC_RADIUS, CIRC_SEG, SPEED_SLOW, SPEED_FAST, SPEED_MOVE, EXT_SEGMENT);
+              document.getElementById('textarea').value += circlePattern(midPointX, midPointY, CIRC_RADIUS, CIRC_RES, SPEED_SLOW, SPEED_FAST, SPEED_MOVE, EXT_SEGMENT);
             }
           }
         }
       }
     }
   }
-
+/*
   // mark area of speed changes and close G-code
   document.getElementById('textarea').value += ';\n' +
                                                '; mark the test area for reference\n' +
@@ -394,6 +409,7 @@ function genGcode() {
                                                'M502 ; resets parameters from ROM\n' +
                                                'M501 ; resets parameters from EEPROM\n' +
                                                ';';
+*/
 }
 
 // Save content of textarea to file using
@@ -501,6 +517,89 @@ function rotateY(x, xm, y, ym, a) {
   return yr;
 }
 
+function moveToStart(coord, speedMove) {
+  var gcode = '';
+  gcode += ';\n' +
+           '; move to start\n' +
+           ';\n' +
+           'G1 X' + Math.round10(rotateX(coord['startX'], coord['centerX'], coord['startY'], coord['centerY'], coord['printDir']), -4) +
+             ' Y' + Math.round10(rotateY(coord['startX'], coord['centerX'], coord['startY'], coord['centerY'], coord['printDir']), -4) +
+             ' F' + speedMove + ' ; move to pattern start start\n';
+  return gcode;
+}
+
+function moveToLayerHeight(speed, layerHeight) {
+  var gcode = '';
+  gcode += ';\n' +
+           '; move to layer height\n' +
+           ';\n' +
+           'G1 Z' + layerHeight + ' F' + speed + '\n';
+  return gcode;
+}
+
+function retract(direction, amount) {
+  var gcode = '';
+  if (direction == '-') {
+    gcode += 'G1 E-' + amount + '\n';
+  } else if (direction == '+') {
+    gcode += 'G1 E' + amount + '\n';
+  }
+  return gcode;
+}
+
+function createPrime(coord, lengthX, lengthY, speeds, extParam) {
+  var gcode = '';
+
+  gcode += ';\n' +
+           '; prime nozzle\n' +
+           ';\n' +
+           'G1 X' + Math.round10(rotateX(coord['startX'] + lengthX, coord['centerX'], coord['startY'] + lengthY, coord['centerY'], coord['printDir']), -4) +
+             ' Y' + Math.round10(rotateY(coord['startX'] + lengthX, coord['centerX'], coord['startY'] + lengthY, coord['centerY'], coord['printDir']), -4) +
+             ' E' + EXT_PRIME1 + ' F' + speeds['slow'] + ' ; prime nozzle\n' +
+           'G1 X' + Math.round10(rotateX(coord['startX'] + lengthX + (LINE_WIDTH * 1.5), coord['centerX'], coord['startY'] + lengthY, coord['centerY'], coord['printDir']), -4) +
+             ' Y' + Math.round10(rotateY(coord['startX'] + lengthX + (LINE_WIDTH * 1.5), coord['centerX'], coord['startY'] + lengthY, coord['centerY'], coord['printDir']), -4) +
+             ' E' + EXT_PRIME2 + ' F' + speeds['slow'] + ' ; prime nozzle\n' +
+           'G1 X' + Math.round10(rotateX(coord['startX'] + lengthX + (LINE_WIDTH * 1.5), coord['centerX'], coord['startY'] + lengthY, coord['centerY'], coord['printDir']), -4) +
+             ' Y' + Math.round10(rotateY(coord['startX'] + lengthX + (LINE_WIDTH * 1.5), coord['centerX'], coord['startY'] + lengthY, coord['centerY'], coord['printDir']), -4) +
+             ' E' + EXT_PRIME1 + ' F' + speeds['slow'] + ' ; prime nozzle\n';
+  return gcode;
+}
+
+function createGlyphs(coord, speeds) {
+  var glyphSegHeight = 2;
+  var glyphExt = 1;
+  var glyphs = {"1": 'G1 X' + Math.round10(rotateX(coord['startX'], coord['centerX'], coord['startY'] + (2 * glyphSegHeight), coord['centerY'], coord['printDir']), -4) +
+                     ' Y' + Math.round10(rotateY(coord['startX'], coord['centerX'], coord['startY'] + (2 * glyphSegHeight), coord['centerY'], coord['printDir']), -4) +
+                     ' E' + (2 * glyphExt) + ' F' + speeds['slow'] + ' ; 1\n',
+  "2": 'G1 X' + Math.round10(rotateX(coord['startX'], coord['centerX'], coord['startY'] + (2 * glyphSegHeight), coord['centerY'], coord['printDir']), -4) +
+       ' Y' + Math.round10(rotateY(coord['startX'], coord['centerX'], coord['startY'] + (2 * glyphSegHeight), coord['centerY'], coord['printDir']), -4) +
+       ' F' + speeds['move'] + ' ; 2\n' +
+       'G1 X' + Math.round10(rotateX(coord['startX'] + glyphSegHeight, coord['centerX'], coord['startY'], coord['centerY'], coord['printDir']), -4) +
+       ' Y' + Math.round10(rotateY(coord['startX'] + glyphSegHeight, coord['centerX'], coord['startY'], coord['centerY'], coord['printDir']), -4) +
+       ' E' + glyphExt + ' F' + speeds['slow'] + ' ; 2\n' +
+       'G1 X' + Math.round10(rotateX(coord['startX'], coord['centerX'], coord['startY'] - glyphSegHeight, coord['centerY'], coord['printDir']), -4) +
+       ' Y' + Math.round10(rotateY(coord['startX'], coord['centerX'], coord['startY'] - glyphSegHeight, coord['centerY'], coord['printDir']), -4) +
+       ' E' + glyphExt + ' F' + speeds['slow'] + ' ; 2\n' +
+       'G1 X' + Math.round10(rotateX(coord['startX'] - glyphSegHeight, coord['centerX'], coord['startY'], coord['centerY'], coord['printDir']), -4) +
+       ' Y' + Math.round10(rotateY(coord['startX'] - glyphSegHeight, coord['centerX'], coord['startY'], coord['centerY'], coord['printDir']), -4) +
+       ' E' + glyphExt + ' F' + speeds['slow'] + ' ; 2\n' +
+       'G1 X' + Math.round10(rotateX(coord['startX'], coord['centerX'], coord['startY'] - glyphSegHeight, coord['centerY'], coord['printDir']), -4) +
+       ' Y' + Math.round10(rotateY(coord['startX'], coord['centerX'], coord['startY'] - glyphSegHeight, coord['centerY'], coord['printDir']), -4) +
+       ' E' + glyphExt + ' F' + speeds['slow'] + ' ; 2\n' +
+       'G1 X' + Math.round10(rotateX(coord['startX'] + glyphSegHeight, coord['centerX'], coord['startY'], coord['centerY'], coord['printDir']), -4) +
+       ' Y' + Math.round10(rotateY(coord['startX'] + glyphSegHeight, coord['centerX'], coord['startY'], coord['centerY'], coord['printDir']), -4) +
+       ' E' + glyphExt + ' F' + speeds['slow'] + ' ; 2\n'
+    };
+
+
+}
+
+/*
+G1 X55 Y62.5 F7200 ; move to prime start
+G1 X55 Y137.5 E7.4835 F1200 ; prime nozzle
+G1 X55.72 Y137.5 E0.0718 F1200 ; prime nozzle
+G1 X55.72 Y62.5 E7.4835 F1200 ; prime nozzle
+*/
 // Calculate circle packing in rectangle
 function circleRectPacking(sizeX, sizeY, radius, spacing, xm, ym, offsetX, offsetY) {
   var midpoints = [],
@@ -544,29 +643,37 @@ function circleRectPacking(sizeX, sizeY, radius, spacing, xm, ym, offsetX, offse
 
 function circlePattern(x, y, radius, seg, slow, fast, move, ext) {
   var gcode = '',
-      end = 2 * Math.PI;
+      end = 2 * Math.PI,
+      step = end / seg,
+      angle = 0;
 
   gcode += 'G1 X' + (x + radius) +
            ' Y' + y +
-           ' F' + move + '\n';
-  for (var angle=0; angle < end; angle += seg) {
-    if (angle <= end * (1/4)) {
-      gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
-               ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
-               ' E' + ext + ' F' + slow + '\n';
-    } else if (angle > end * (1/4) && angle <= end * (2/4)) {
-      gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
-               ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
-               ' E' + ext + ' F' + fast + '\n';
-    } else if (angle > end * (2/4) && angle <= end * (3/4)) {
-      gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
-               ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
-               ' E' + ext + ' F' + slow + '\n';
-    } else {
-      gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
-               ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
-               ' E' + ext + ' F' + fast + '\n';
-    }
+           ' F' + move + ' ; move to midpoint\n';
+  for (angle=0; angle <= end * 0.2; angle += step) {
+    gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
+            ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
+            ' E' + ext + ' F' + slow + '\n';
+  }
+  for (angle; angle <= end * 0.4; angle += step) {
+    gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
+            ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
+            ' E' + ext + ' F' + fast + '\n';
+  }
+  for (angle; angle <= end * 0.6; angle += step) {
+    gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
+            ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
+            ' E' + ext + ' F' + slow + '\n';
+  }
+  for (angle; angle <= end * 0.8; angle += step) {
+    gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
+            ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
+            ' E' + ext + ' F' + fast + '\n';
+  }
+  for (angle; angle <= end; angle += step) {
+    gcode += 'G1 X' + Math.round10((Math.cos(angle) * radius) + x, -4) +
+            ' Y' + Math.round10((Math.sin(angle) * radius) + y, -4) +
+            ' E' + ext + ' F' + slow + '\n';
   }
   return gcode;
 }

@@ -1,3 +1,5 @@
+// minifier: gcc, buffer: 8388608, minifierOptions: "compilation_level=SIMPLE_OPTIMIZATIONS externs=D:\21_Git\MarlinDocumentation\_tools\lin_advance\FileSaver.min.ext.js externs=D:\21_Git\MarlinDocumentation\_tools\lin_advance\jquery.ext.js"
+
 /**
  * K-Factor Calibration Pattern
  * Copright (C) 2018 Sineos [https://github.com/Sineos]
@@ -656,7 +658,7 @@ function setLocalStorage() {
   };
 
   var lsSettings = JSON.stringify(settings);
-  localStorage.setItem('LIN_SETTINGS', lsSettings);
+  window.localStorage.setItem('LIN_SETTINGS', lsSettings);
 }
 
 // toggle html elements
@@ -673,8 +675,8 @@ $(window).load(function() {
   //Get localStorage data
   var lsSettings,
       settings;
-  if (localStorage.getItem('LIN_SETTINGS')) {
-    lsSettings = unescape(localStorage.getItem('LIN_SETTINGS'));
+  if (window.localStorage.getItem('LIN_SETTINGS')) {
+    lsSettings = unescape(window.localStorage.getItem('LIN_SETTINGS'));
     settings = jQuery.parseJSON(lsSettings);
     $('#FIL_DIA').val(settings['FILAMENT_DIAMETER']);
     $('#NOZ_DIA').val(settings['NOZZLE_DIAMETER']);
